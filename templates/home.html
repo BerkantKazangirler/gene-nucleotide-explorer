@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="tr" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReFinder - Gen Arama</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            padding-top: 70px; /* Navbar yüksekliği için */
+            padding-bottom: 60px; /* Footer yüksekliği için */
+        }
+        .navbar {
+            background-color: #1f1f1f !important;
+        }
+        .footer {
+            background-color: #1f1f1f;
+            padding: 20px 0;
+            text-align: center;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            z-index: 1030;
+        }
+        .form-section {
+            background-color: #1f1f1f;
+            padding: 50px 0;
+        }
+        .table {
+            background-color: #1f1f1f;
+            color: #ffffff;
+        }
+        .table th, .table td {
+            border-color: #333;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">ReFinder</a>
+        </div>
+    </nav>
+
+    <section class="form-section">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-6">
+                    <form method="POST" action="/search">
+                        <div class="mb-3">
+                            <label for="gene_symbol" class="form-label">Gen Sembolü:</label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary" id="gene_symbol" name="gene_symbol" placeholder="Örneğin: MEFV" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Ara</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {% if results %}
+    <section class="results-section py-5">
+        <div class="container">
+            <h2 class="text-center mb-4">Bulunan Gen ID'leri</h2>
+            <div class="table-responsive">
+                <table class="table table-dark table-striped">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Gen ID</th>
+                            <th>Özet</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for idx, result in enumerate(results, 1) %}
+                        <tr style="cursor: pointer;" onclick="window.location.href='/result/{{ result.id }}/{{ result.accession }}/{{ result.start }}/{{ result.stop }}'">
+                            <td>{{ idx }}</td>
+                            <td>{{ result.id }}</td>
+                            <td>{{ result.summary | safe }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 ReFinder. Tüm hakları saklıdır.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        async function getFeatures(gid, accession, start, stop) {
+            try {
+                const response = await fetch(`/features/${gid}/${accession}/${start}/${stop}`);
+                const text = await response.text();
+                alert(text);
+            } catch (error) {
+                alert('Hata: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html></content>
+
