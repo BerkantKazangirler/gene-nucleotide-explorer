@@ -1,5 +1,14 @@
+import { Footer } from "./components/footer";
+import { Navbar } from "./components/navbar";
+
 function App() {
-  return <h1 className="text-3xl font-bold underline">Hello world!</h1>;
+  return (
+    <div className="w-screen h-screen justify-between flex flex-col">
+      <Navbar />
+      <span>Test</span>
+      <Footer />
+    </div>
+  );
 }
 
 export default App;
