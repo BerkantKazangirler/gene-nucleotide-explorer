@@ -1,9 +1,15 @@
 from flask import Flask, render_template, request
+
+import api
 from refind_utils import ReFind
 
 app = Flask(__name__)
 app.jinja_env.globals.update(enumerate=enumerate)
 refind = ReFind()
+
+# React arayüzünün kullandığı JSON uç noktaları (/api/...)
+api.refind = refind
+app.register_blueprint(api.api)
 
 @app.route('/')
 def home():
@@ -29,7 +35,7 @@ def search():
                 </div>
                 <p><strong>Summary:</strong> {summary.get('summary', 'N/A')}</p>
                 """
-                results.append({'id': gid, 'summary': summary_html, 'accession': summary.get('accession'), 'start': summary.get('start'), 'stop': summary.get('stop')})
+                results.append({'id': gid, 'summary': summary_html, 'accession': summary.get('accession'), 'start': summary.get('seq_start'), 'stop': summary.get('seq_stop')})
             except Exception as e:
                 results.append({'id': gid, 'summary': f'<span class="text-danger">Hata: {str(e)}</span>'})
         return render_template('home.html', results=results)
