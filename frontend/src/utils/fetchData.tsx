@@ -1,13 +1,21 @@
-export function fetchData(url: string): Promise<any> {
-  return fetch(url)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.json();
-    })
-    .catch((error) => {
-      console.error("Error fetching data:", error);
-      throw error;
-    });
+export async function fetchData<T = unknown>(url: string, signal?: AbortSignal): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(url, { signal });
+  } catch (error) {
+    if ((error as Error).name === "AbortError") throw error;
+    throw new Error("Sunucuya ulaşılamadı. Backend'in (python app.py) çalıştığından emin ol.", { cause: error });
+  }
+
+  if (!response.ok) {
+    let message = `İstek başarısız oldu (HTTP ${response.status}).`;
+    try {
+      const body = await response.json();
+      if (body?.error) message = body.error;
+    } catch {
+      // JSON olmayan hata cevabı; varsayılan mesaj kalır
+    }
+    throw new Error(message);
+  }
+  return response.json() as Promise<T>;
 }

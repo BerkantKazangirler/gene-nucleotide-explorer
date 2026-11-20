@@ -11,6 +11,14 @@ export default defineConfig({
   build: {
     outDir: "dist",
     target: "esnext",
+    // 3B sahne (three.js) ayrı ve tembel yüklenen bir parça; ~950 kB olması beklenen bir durum
+    chunkSizeWarningLimit: 1000,
+  },
+  server: {
+    // Geliştirme sırasında /api isteklerini Flask'a yönlendirir (CORS gerekmez)
+    proxy: {
+      "/api": "http://127.0.0.1:5000",
+    },
   },
   resolve: {
     alias: {
