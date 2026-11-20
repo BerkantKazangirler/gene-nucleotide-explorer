@@ -79,4 +79,6 @@ Tüm gen koordinatları genin kendi okuma yönündedir (5′→3′), 1'den baş
 
 ## 📄 Lisans
 
+Bu proje [MIT Lisansı](LICENSE) ile lisanslanmıştır.
 
+`backend/database/emboss_e.dat` dosyası [REBASE](http://rebase.neb.com) (The Restriction Enzyme Database, Dr. Richard J. Roberts) verisidir ve MIT lisansının kapsamında değildir; kendi kullanım koşullarına tabidir.

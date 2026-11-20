@@ -6,6 +6,7 @@
     "email": "berkantkazangirler@gmail.com",
     "url": "https://www.berkantkazangirler.tech"
   },
+  "license": "MIT",
   "private": true,
   "version": "0.0.0",
   "type": "module",
