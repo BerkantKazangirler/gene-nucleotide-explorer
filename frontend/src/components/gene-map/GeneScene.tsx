@@ -40,7 +40,6 @@ export interface GeneSceneProps {
   pinned: HoverTarget | null;
   onHover: (t: HoverTarget | null) => void;
   onPin: (t: HoverTarget) => void;
-  /** Doluysa sahne gerçek baz çiftlerini gösteren yakın görünüme geçer. */
   bases: BaseWindow | null;
   onHoverBase: (b: BaseHover | null) => void;
 }
@@ -80,13 +79,9 @@ export default function GeneScene(props: GeneSceneProps) {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Genel bakış: genin tamamı tek bir çift sarmal                              */
-/* -------------------------------------------------------------------------- */
-
 const OVERVIEW_WIDTH = 24;
 const O_RADIUS = 0.85;
-const O_TWIST = (Math.PI * 2) / 2.1; // her 2,1 birimde bir tam tur (görsel; gerçek ölçek değil)
+const O_TWIST = (Math.PI * 2) / 2.1;
 const MIN_EXON_WIDTH = 0.3;
 
 interface Rung {
@@ -111,7 +106,6 @@ function OverviewHelix({
   const hotExon =
     hovered?.transcriptId === transcript.id ? hovered.exon : pinned?.transcriptId === transcript.id ? pinned.exon : null;
 
-  // Basamaklar: intronlarda seyrek, ekzonlarda sık. Kısa ekzonlar da en az 3 basamakla görünür.
   const rungs = useMemo<Rung[]>(() => {
     const out: Rung[] = [];
     const spans = transcript.exons.map((e) => {
@@ -141,7 +135,6 @@ function OverviewHelix({
   const curveA = useMemo(() => new HelixCurve(-W / 2, W / 2, O_RADIUS, O_TWIST, 0), [W]);
   const curveB = useMemo(() => new HelixCurve(-W / 2, W / 2, O_RADIUS, O_TWIST, GROOVE), [W]);
 
-  // Omurga rengi x konumuna göre: ekzon bölgeleri parlak, intronlar sönük
   const backboneColor = useMemo(() => {
     const colors = {
       cds: new THREE.Color(REGION_COLORS.cds),
@@ -149,7 +142,6 @@ function OverviewHelix({
       intron: new THREE.Color(REGION_COLORS.intronLine),
       hot: new THREE.Color(REGION_COLORS.hover),
     };
-    // Çok kısa ekzonlar tüp çözünürlüğünde kaybolmasın diye en az MIN_EXON_WIDTH genişlikte boyanır
     const spans = transcript.exons.map((e) => {
       const a = ((e.start - 1) / length) * W - W / 2;
       const b = (e.end / length) * W - W / 2;
@@ -165,7 +157,6 @@ function OverviewHelix({
       if (span.n === hotExon) return colors.hot;
       const pos = Math.round(((x + W / 2) / W) * length) + 1;
       const r = regionAt(blocks, pos);
-      // Ekzonun içindeysek tam bölgeyi (CDS/UTR), genişletilmiş kenarındaysak ekzonun baskın türünü kullan
       return r.exon === span.n && r.region !== "intron" ? colors[r.region] : colors[span.kind];
     };
   }, [transcript, blocks, length, W, hotExon]);
@@ -212,7 +203,6 @@ function OverviewHelix({
         <meshStandardMaterial roughness={0.5} />
       </instancedMesh>
 
-      {/* Ekzonlar için görünmez tıklama alanları + seçili ekzonun hafif parıltısı */}
       {transcript.exons.map((e) => {
         const mid = (xOf(e.start) + xOf(e.end + 1)) / 2;
         const w = Math.max(xOf(e.end + 1) - xOf(e.start), MIN_EXON_WIDTH);
@@ -265,13 +255,9 @@ function OverviewHelix({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Yakın görünüm: gerçek dizi, her basamak bir baz çifti                       */
-/* -------------------------------------------------------------------------- */
-
-const BASE_RISE = 0.22; // komşu baz çiftleri arası (gerçekte 0,34 nm)
+const BASE_RISE = 0.22;
 const B_RADIUS = 1.0;
-const B_TWIST = (Math.PI * 2) / (10.5 * BASE_RISE); // B-DNA: tur başına ~10,5 baz çifti
+const B_TWIST = (Math.PI * 2) / (10.5 * BASE_RISE);
 
 function BasesHelix({
   window: win,
@@ -324,8 +310,9 @@ function BasesHelix({
     const m = new THREE.Matrix4();
     const c = new THREE.Color();
     const white = new THREE.Color("#ffffff");
+    const count = info.length;
     info.forEach((b, i) => {
-      const x = xAt(i);
+      const x = (i - (count - 1) / 2) * BASE_RISE;
       const pA = helixPoint(x, B_RADIUS, B_TWIST, 0);
       const pB = helixPoint(x, B_RADIUS, B_TWIST, GROOVE);
       const mid = new THREE.Vector3().addVectors(pA, pB).multiplyScalar(0.5);
@@ -343,11 +330,8 @@ function BasesHelix({
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
-    // xAt n'e bağlı; n info'dan türetiliyor
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [info, hoverIdx]);
 
-  // Bölge etiketleri: "Ekzon 3 (CDS)", "İntron" gibi ardışık parçalar
   const runs = useMemo(() => {
     const out: { from: number; to: number; text: string; color: string }[] = [];
     info.forEach((b, i) => {
@@ -395,7 +379,6 @@ function BasesHelix({
         <meshStandardMaterial roughness={0.45} />
       </instancedMesh>
 
-      {/* Baz harfleri, omurganın hemen dışında */}
       {info.map((b, i) => {
         const pa = helixPoint(xAt(i), B_RADIUS + 0.36, B_TWIST, 0);
         const pb = helixPoint(xAt(i), B_RADIUS + 0.36, B_TWIST, GROOVE);
@@ -407,7 +390,6 @@ function BasesHelix({
         );
       })}
 
-      {/* Her 10 bazda bir konum */}
       {info.map((b, i) =>
         b.pos % 10 === 0 ? (
           <Label key={`t${i}`} text={formatNumber(b.pos)} position={[xAt(i), -B_RADIUS - 0.9, 0]} size={0.26} opacity={0.8} />
@@ -430,15 +412,6 @@ function BasesHelix({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* Kamera                                                                     */
-/* -------------------------------------------------------------------------- */
-
-/**
- * Kamerayı sahnenin tamamını gösterecek konuma getirir. İlk açılışta yandan süzülür; genel bakış ile
- * baz çifti görünümü arasında geçerken bulunduğu yerden yeni konuma uçar. Hareket azaltma tercihi varsa
- * doğrudan yerleşir.
- */
 function CameraRig({ width, animate, flyKey }: { width: number; animate: boolean; flyKey: string }) {
   const camera = useThree((s) => s.camera);
   const controls = useThree((s) => s.controls) as unknown as { target: THREE.Vector3 } | null;
@@ -462,7 +435,6 @@ function CameraRig({ width, animate, flyKey }: { width: number; animate: boolean
       camera.lookAt(0, 0, 0);
     }
     controls?.target.set(0, 0, 0);
-    // home sadece flyKey değişince ya da ekran oranı değişince yeniden uygulanır
   }, [camera, controls, home, animate, flyKey]);
 
   useFrame((_, dt) => {

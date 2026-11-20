@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { useFetch } from "@/hooks/useFetch";
-import type { SearchResponse, SearchResult } from "@/types";
+import type { SearchResponse } from "@/types";
 import { formatLength } from "@/utils/format";
 
 const EXAMPLES = ["MEFV", "BRCA1", "TP53", "CFTR", "HBB"];
@@ -18,13 +18,12 @@ interface Props {
 }
 
 export const SearchLayout = ({ query, organism, onSearch, onOpen }: Props) => {
-  const [text, setText] = useState(query);
-  const [org, setOrg] = useState(organism);
-
   const url = query
     ? `/api/search?q=${encodeURIComponent(query)}${organism ? `&organism=${encodeURIComponent(organism)}` : ""}`
     : null;
   const state = useFetch<SearchResponse>(url);
+  const [text, setText] = useState(query);
+  const [org, setOrg] = useState(organism);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -32,41 +31,40 @@ export const SearchLayout = ({ query, organism, onSearch, onOpen }: Props) => {
     if (q) onSearch(q, org);
   };
 
-  return (
-    <div className="pt-14 sm:pt-20">
-      <section className="max-w-2xl">
-        <h1 className="font-display font-extrabold text-4xl sm:text-6xl leading-[1.02] tracking-tight">
-          Hangi geni merak ediyorsun?
-        </h1>
-        <p className="mt-4 text-lg text-ink-soft max-w-xl">
-          Gen sembolünü ya da NCBI gen numarasını yaz. Genin nerede durduğunu, hangi parçalardan oluştuğunu ve
-          proteine dönüşen kısmını 3B haritada göster.
+  if (!query) {
+    return (
+      <div className="pt-8 max-w-3xl">
+        <h1 className="text-xl font-semibold">Gen arama</h1>
+        <p className="mt-2 text-ink-soft leading-relaxed">
+          NCBI Gene veritabanında gen sembolü (MEFV gibi) ya da Gene ID (4210 gibi) ile arama yapılır. Bir sonuca
+          tıklandığında genin kromozom üzerindeki yeri, transkriptleri, ekzon ve intron yapısı, proteine çevrilen bölgeleri
+          ve nükleotid dizisi görüntülenir.
         </p>
-
-        <form onSubmit={submit} className="mt-8">
+        <form onSubmit={submit} className="mt-6">
           <div className="flex gap-2">
-            <label className="sr-only" htmlFor="q">
+            <label className="sr-only" htmlFor="home-q">
               Gen sembolü veya numarası
             </label>
             <input
-              id="q"
+              id="home-q"
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Örneğin MEFV veya 4210"
               autoComplete="off"
               spellCheck={false}
-              className="flex-1 min-w-0 h-14 rounded-xl border border-line bg-sheet px-4 text-lg font-medium placeholder:text-ink-soft/60 focus:outline-none focus:border-base-c"
+              autoFocus
+              className="flex-1 min-w-0 h-14 rounded-xl border border-line bg-paper px-4 text-lg font-medium placeholder:text-ink-soft/60 focus:outline-none focus:border-base-c"
             />
-            <button className="h-14 px-6 rounded-xl bg-ink text-sheet font-bold hover:bg-base-c transition-colors">Ara</button>
+            <button className="h-14 px-6 rounded-xl bg-ink text-paper font-bold hover:bg-base-c transition-colors">Ara</button>
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
-            <fieldset className="flex rounded-lg border border-line p-0.5 bg-sheet">
+            <fieldset className="flex rounded-lg border border-line p-0.5 bg-paper">
               <legend className="sr-only">Tür</legend>
               {ORGANISMS.map((o) => (
                 <label
                   key={o.value}
-                  className={`px-3 py-1.5 rounded-md cursor-pointer ${org === o.value ? "bg-ink text-sheet" : "text-ink-soft hover:text-ink"}`}
+                  className={`px-3 py-1.5 rounded-md cursor-pointer ${org === o.value ? "bg-ink text-paper" : "text-ink-soft hover:text-ink"}`}
                 >
                   <input
                     type="radio"
@@ -90,7 +88,7 @@ export const SearchLayout = ({ query, organism, onSearch, onOpen }: Props) => {
                     setOrg("Homo sapiens");
                     onSearch(ex, "Homo sapiens");
                   }}
-                  className="font-mono text-[13px] px-2 py-1 rounded-md border border-line bg-sheet text-ink hover:border-ink"
+                  className="font-mono text-[13px] px-2 py-1 rounded-md border border-line bg-paper text-ink hover:border-ink"
                 >
                   {ex}
                 </button>
@@ -98,80 +96,97 @@ export const SearchLayout = ({ query, organism, onSearch, onOpen }: Props) => {
             </div>
           </div>
         </form>
-      </section>
+      </div>
+    );
+  }
 
-      <section className="mt-14" aria-live="polite">
-        {state.status === "loading" && <ResultsSkeleton />}
-        {state.status === "error" && <Notice tone="error">{state.error}</Notice>}
-        {state.status === "success" && state.data.results.length === 0 && (
+  return (
+    <div className="pt-6" aria-live="polite">
+      <h1 className="text-xl font-semibold">
+        Arama sonuçları: <span className="font-normal">{query}</span>
+        {organism && <span className="font-normal text-ink-soft"> ({organism})</span>}
+      </h1>
+
+      {state.status === "loading" && <p className="mt-4 text-ink-soft">Aranıyor…</p>}
+      {state.status === "error" && (
+        <div className="mt-4">
+          <Notice tone="error">{state.error}</Notice>
+        </div>
+      )}
+      {state.status === "success" && state.data.results.length === 0 && (
+        <div className="mt-4">
           <Notice>
-            “{state.data.query}” adında bir gen bulunamadı. Gen sembolünü kontrol et (ör. MEFV) ya da tür filtresini
-            “Tüm türler” yap. Enzim adları (ör. EcoRI) burada aranmaz.
+            “{state.data.query}” için sonuç bulunamadı. Gen sembolünü kontrol edin ya da tür filtresini “Tüm türler” yapın.
+            Enzim adları (EcoRI gibi) bu aramada geçerli değildir.
           </Notice>
-        )}
-        {state.status === "success" && state.data.results.length > 0 && (
-          <>
-            <p className="text-sm text-ink-soft mb-3">
-              {state.data.total > state.data.results.length
-                ? `${state.data.total} sonucun ilk ${state.data.results.length} tanesi`
-                : `${state.data.results.length} sonuç`}
-            </p>
-            <ul className="divide-y divide-line border-y border-line">
-              {state.data.results.map((r) => (
-                <ResultRow key={r.id} r={r} onOpen={onOpen} />
-              ))}
-            </ul>
-          </>
-        )}
-      </section>
+        </div>
+      )}
+      {state.status === "success" && state.data.results.length > 0 && (
+        <>
+          <p className="mt-1 text-sm text-ink-soft">
+            {state.data.total > state.data.results.length
+              ? `${state.data.total} kayıt bulundu, ilk ${state.data.results.length} tanesi gösteriliyor.`
+              : `${state.data.results.length} kayıt bulundu.`}
+          </p>
+          <div className="mt-4 overflow-x-auto border border-line rounded">
+            <table className="w-full text-sm">
+              <thead className="bg-sheet text-left text-ink-soft">
+                <tr>
+                  <th className="px-3 py-2 font-semibold">Sembol</th>
+                  <th className="px-3 py-2 font-semibold">Açıklama</th>
+                  <th className="px-3 py-2 font-semibold">Tür</th>
+                  <th className="px-3 py-2 font-semibold">Konum</th>
+                  <th className="px-3 py-2 font-semibold text-right">Ekzon</th>
+                  <th className="px-3 py-2 font-semibold text-right">Uzunluk</th>
+                </tr>
+              </thead>
+              <tbody>
+                {state.data.results.map((r) => (
+                  <tr
+                    key={r.id}
+                    onClick={() => r.has_location && onOpen(r.id)}
+                    className={`border-t border-line ${r.has_location ? "cursor-pointer hover:bg-sheet" : "text-ink-soft"}`}
+                  >
+                    <td className="px-3 py-2 font-semibold whitespace-nowrap">
+                      {r.has_location ? (
+                        <a
+                          href={`?gene=${r.id}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onOpen(r.id);
+                          }}
+                        >
+                          {r.symbol ?? r.id}
+                        </a>
+                      ) : (
+                        r.symbol ?? r.id
+                      )}
+                    </td>
+                    <td className="px-3 py-2">{r.description}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <i>{r.organism}</i>
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">{r.map_location ?? "—"}</td>
+                    <td className="px-3 py-2 text-right">{r.exon_count > 0 ? r.exon_count : "—"}</td>
+                    <td className="px-3 py-2 text-right whitespace-nowrap">
+                      {r.has_location ? formatLength(r.length) : "konum yok"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 };
 
-const ResultRow = ({ r, onOpen }: { r: SearchResult; onOpen: (id: string) => void }) => (
-  <li>
-    <button
-      onClick={() => onOpen(r.id)}
-      disabled={!r.has_location}
-      className="w-full text-left py-4 px-2 -mx-2 rounded-lg grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[9rem_minmax(0,1fr)_auto] gap-x-6 gap-y-1 items-baseline hover:bg-sheet disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      <span className="font-display font-bold text-2xl tracking-tight">{r.symbol ?? r.id}</span>
-      <span className="sm:order-none order-last col-span-2 sm:col-span-1 min-w-0">
-        <span className="block truncate">{r.description}</span>
-        <span className="block text-sm text-ink-soft">
-          <i>{r.organism}</i>
-          {r.map_location && <>, kromozom {r.map_location}</>}
-        </span>
-      </span>
-      <span className="text-sm text-ink-soft text-right whitespace-nowrap">
-        {r.has_location ? (
-          <>
-            {r.exon_count > 0 && <>{r.exon_count} ekzon, </>}
-            {formatLength(r.length)}
-          </>
-        ) : (
-          "konum bilgisi yok"
-        )}
-      </span>
-    </button>
-  </li>
-);
-
-const ResultsSkeleton = () => (
-  <div className="border-y border-line divide-y divide-line" aria-label="Sonuçlar yükleniyor">
-    {[0, 1, 2].map((i) => (
-      <div key={i} className="py-5 flex gap-6 animate-pulse">
-        <div className="h-6 w-24 rounded bg-line" />
-        <div className="h-4 flex-1 max-w-md rounded bg-line mt-1" />
-      </div>
-    ))}
-  </div>
-);
-
 export const Notice = ({ children, tone = "info" }: { children: ReactNode; tone?: "info" | "error" }) => (
   <div
     role={tone === "error" ? "alert" : undefined}
-    className={`rounded-xl border px-4 py-3 max-w-2xl ${tone === "error" ? "border-base-t/40 bg-base-t/5 text-base-t" : "border-line bg-sheet text-ink-soft"}`}
+    className={`border-l-4 px-3 py-2 max-w-3xl text-sm ${tone === "error" ? "border-base-t bg-base-t/5 text-base-t" : "border-line bg-sheet text-ink-soft"}`}
   >
     {children}
   </div>

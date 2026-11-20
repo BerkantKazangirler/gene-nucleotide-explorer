@@ -23,11 +23,6 @@ const NODE_COLORS = {
   protein: "#f2b134",
 };
 
-/**
- * Gen → transkript → ekzon → protein ilişki ağı (react-force-graph-3d).
- * Birden fazla transkriptin ortak kullandığı ekzonlar tek düğümdür; seçili transkriptin yolu
- * parlak, gen → transkript → protein bağlantılarında akan parçacıklar okuma yönünü gösterir.
- */
 export default function GeneGraph(props: GeneGraphProps) {
   const { symbol, transcripts, selectedId, hovered, pinned, onHover, onPin, onSelectTranscript } = props;
   const wrap = useRef<HTMLDivElement>(null);
@@ -37,7 +32,6 @@ export default function GeneGraph(props: GeneGraphProps) {
 
   const data = useMemo(() => buildGraph(symbol, transcripts), [symbol, transcripts]);
 
-  // Düğümler birbirini biraz daha itsin; yerleşim oturmaya başlayınca ağı ekrana sığdır
   const ready = size.width > 0;
   useEffect(() => {
     if (!ready) return;
@@ -66,7 +60,6 @@ export default function GeneGraph(props: GeneGraphProps) {
     (n.kind === "exon" && n.exonIn?.[selectedId] != null) ||
     (n.kind === "protein" && !!n.transcripts?.includes(selectedId));
 
-  /** Ekzon düğümü için hangi transkript bağlamında seçim yapılacağı: seçili transkript içeriyorsa o. */
   const exonTarget = (n: GeneNode): HoverTarget | null => {
     if (!n.exonIn) return null;
     const tid = n.exonIn[selectedId] != null ? selectedId : Object.keys(n.exonIn)[0];

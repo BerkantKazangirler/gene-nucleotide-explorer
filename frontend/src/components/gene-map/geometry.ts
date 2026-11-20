@@ -2,7 +2,6 @@ import type { Transcript } from "@/types";
 
 export type BlockKind = "utr" | "cds";
 
-/** Bir ekzonun haritada çizilecek parçası: kodlamayan (UTR) ya da protein kodlayan (CDS) kısım. */
 export interface Block {
   exon: number;
   start: number;
@@ -10,7 +9,6 @@ export interface Block {
   kind: BlockKind;
 }
 
-/** Bir transkriptin ekzonlarını CDS sınırlarına göre UTR / CDS bloklarına böler. */
 export function transcriptBlocks(t: Transcript): Block[] {
   const blocks: Block[] = [];
   for (const exon of t.exons) {
@@ -32,7 +30,6 @@ export function transcriptBlocks(t: Transcript): Block[] {
   return blocks;
 }
 
-/** Kodlayan / kodlamayan ekzon uzunluğu. */
 export function codingShare(t: Transcript) {
   const blocks = transcriptBlocks(t);
   const cds = blocks.filter((b) => b.kind === "cds").reduce((a, b) => a + b.end - b.start + 1, 0);
@@ -40,7 +37,6 @@ export function codingShare(t: Transcript) {
   return { cds, total };
 }
 
-/** Transkriptleri uzunluk ve ekzon sayısına göre "temsilci" önce gelecek şekilde sıralar. */
 export function sortTranscripts(ts: Transcript[]): Transcript[] {
   return [...ts].sort((a, b) => {
     const am = a.type === "mRNA" ? 0 : 1;

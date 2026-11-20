@@ -1,20 +1,15 @@
 @import "tailwindcss";
 
-/*
-  Renkler DNA dizileme (Sanger kromatogram) geleneğinden gelir:
-  A = yeşil, C = mavi, G = grafit, T = kırmızı.
-  Haritada: CDS = mavi, UTR = yeşil, intron = grafit, seçim = kırmızı.
-*/
 @theme {
-  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
-  --color-paper: #f1f4f2;
-  --color-sheet: #fbfcfb;
-  --color-ink: #17262b;
-  --color-ink-soft: #4d5e63;
-  --color-line: #d5ddda;
+  --color-paper: #ffffff;
+  --color-sheet: #f5f7f8;
+  --color-ink: #1d272b;
+  --color-ink-soft: #5a676d;
+  --color-line: #dbe1e4;
+  --color-link: #1f5fbf;
   --color-stage: #10242e;
   --color-stage-line: #24414f;
 
@@ -27,22 +22,19 @@
 @layer base {
   html {
     font-family: var(--font-sans);
+    font-size: 15px;
     color: var(--color-ink);
     background: var(--color-paper);
     font-feature-settings: "tnum" 1;
-    -webkit-font-smoothing: antialiased;
   }
   :focus-visible {
     outline: 2px solid var(--color-base-c);
-    outline-offset: 2px;
-    border-radius: 4px;
+    outline-offset: 1px;
   }
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      transition-duration: 0.01ms !important;
-    }
+  a {
+    color: var(--color-link);
+  }
+  a:hover {
+    text-decoration: underline;
   }
 }

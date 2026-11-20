@@ -1,4 +1,4 @@
-# 🧬 ReFinder
+# 🧬 gene-nucleotide-explorer
 
 > 🚧 **Geliştirme aşamasında.**
 
@@ -43,7 +43,7 @@ npm install
 npm run dev                        # http://localhost:5173
 ```
 
-Geliştirme sırasında `/api` istekleri Vite tarafından Flask'a yönlendirilir.
+Geliştirme sırasında `/api` istekleri Vite tarafından Flask'a yönlendirilir. Backend adresi `frontend/.env` dosyasındaki `VITE_API_URL` değişkeninden okunur (örnek: `frontend/.env.example`). Dosya yoksa `http://127.0.0.1:5000` kullanılır.
 
 **Testler** (internet bağlantısı gerektirmez):
 
@@ -55,6 +55,8 @@ python -m unittest discover tests
 ---
 
 ## 🔌 API
+
+Backend yalnızca JSON veri döndürür; arayüz tamamen `frontend/` klasöründeki React uygulamasındadır. Hatalar da `{"error": "..."}` biçiminde JSON olarak gelir. `http://127.0.0.1:5000/` adresi kullanılabilir uç noktaları listeler.
 
 Tüm gen koordinatları genin kendi okuma yönündedir (5′→3′), 1'den başlar ve `1..length` aralığındadır. Ters iplikteki genler otomatik olarak çevrilir.
 

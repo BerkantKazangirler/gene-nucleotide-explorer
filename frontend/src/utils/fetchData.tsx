@@ -8,14 +8,8 @@ export async function fetchData<T = unknown>(url: string, signal?: AbortSignal):
   }
 
   if (!response.ok) {
-    let message = `İstek başarısız oldu (HTTP ${response.status}).`;
-    try {
-      const body = await response.json();
-      if (body?.error) message = body.error;
-    } catch {
-      // JSON olmayan hata cevabı; varsayılan mesaj kalır
-    }
-    throw new Error(message);
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.error ?? `İstek başarısız oldu (HTTP ${response.status}).`);
   }
   return response.json() as Promise<T>;
 }

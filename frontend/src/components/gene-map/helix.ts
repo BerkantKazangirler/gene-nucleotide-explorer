@@ -4,7 +4,6 @@ import type { Block } from "./geometry";
 
 export { BASE_COLORS, complement, hydrogenBonds, REGION_COLORS, type Region } from "./colors";
 
-/** Gen içindeki bir konumun hangi bölgeye düştüğünü bulur (bloklar sıralı olmalı). */
 export function regionAt(blocks: Block[], pos: number): { region: Region; exon: number | null } {
   let lo = 0;
   let hi = blocks.length - 1;
@@ -18,10 +17,6 @@ export function regionAt(blocks: Block[], pos: number): { region: Region; exon: 
   return { region: "intron", exon: null };
 }
 
-/**
- * x ekseni boyunca ilerleyen sarmal eğri. İki iplik aynı eğrinin farklı fazlarıdır.
- * Gerçek DNA'da iki iplik arasında küçük ve büyük oluk olduğu için faz farkı 180° değildir.
- */
 export class HelixCurve extends THREE.Curve<THREE.Vector3> {
   x0: number;
   x1: number;
@@ -49,13 +44,8 @@ export function helixPoint(x: number, radius: number, radPerUnit: number, phase:
   return new THREE.Vector3(x, Math.cos(a) * radius, Math.sin(a) * radius);
 }
 
-/** Küçük oluk açısı: iki omurga arasındaki faz farkı (~140°). */
 export const GROOVE = THREE.MathUtils.degToRad(140);
 
-/**
- * Omurga tüpü için köşe renkleri. Tüpün her halkası x konumuna göre renklendirilir;
- * böylece ekzonlar sarmalın üzerinde parlayan bölgeler olarak görünür.
- */
 export function colorTube(geo: THREE.TubeGeometry, colorAtU: (u: number) => THREE.Color) {
   const { tubularSegments, radialSegments } = geo.parameters;
   const colors = new Float32Array((tubularSegments + 1) * (radialSegments + 1) * 3);
@@ -72,7 +62,6 @@ export function colorTube(geo: THREE.TubeGeometry, colorAtU: (u: number) => THRE
   return geo;
 }
 
-/** İki nokta arasına uzanan silindir için instance matrisi (silindir varsayılan olarak Y ekseninde). */
 const UP = new THREE.Vector3(0, 1, 0);
 export function segmentMatrix(a: THREE.Vector3, b: THREE.Vector3, thickness: number, out = new THREE.Matrix4()) {
   const dir = new THREE.Vector3().subVectors(b, a);

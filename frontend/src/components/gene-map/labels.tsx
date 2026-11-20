@@ -9,7 +9,6 @@ interface LabelProps {
   opacity?: number;
 }
 
-/** react-three-fiber sahnesi için kameraya dönük metin. */
 export function Label({ text, position, size, color = "#d9e5ea", opacity = 1 }: LabelProps) {
   const { texture, aspect } = useMemo(() => textTexture(text, color), [text, color]);
   return (

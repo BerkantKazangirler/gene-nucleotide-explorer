@@ -1,8 +1,3 @@
-"""
-NCBI'a bağlanmadan çalışan testler.  Çalıştırmak için (backend klasöründen):
-
-    python -m unittest discover tests
-"""
 import json
 import os
 import sys
@@ -11,7 +6,7 @@ from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from refind_utils import ReFind, build_structure, flip_segments, parse_location  # noqa: E402
+from refind_utils import ReFind, build_structure, flip_segments, parse_location
 
 REFIND = ReFind()
 
@@ -22,14 +17,12 @@ def site(results, enzyme):
 
 class FindSitesTest(unittest.TestCase):
     def test_ecori_leaves_5_prime_overhang(self):
-        # G^AATTC: üst iplik G'den sonra, alt iplik 5. bazdan sonra kesilir
         hits = site(REFIND.find_sites("TTTTGAATTCTTTT", ["EcoRI"]), "EcoRI")
         self.assertEqual(len(hits), 1)
         self.assertEqual((hits[0]["cut_top"], hits[0]["cut_bottom"]), (5, 9))
         self.assertEqual(hits[0]["overhang"], {"type": "5'-overhang", "length": 4})
 
     def test_psti_leaves_3_prime_overhang(self):
-        # CTGCA^G
         hits = site(REFIND.find_sites("TTCTGCAGTT", ["PstI"]), "PstI")
         self.assertEqual(len(hits), 1)
         self.assertEqual(hits[0]["overhang"]["type"], "3'-overhang")
@@ -45,16 +38,14 @@ class FindSitesTest(unittest.TestCase):
         hits = site(REFIND.find_sites("GCGCGC", ["HhaI"]), "HhaI")
         self.assertEqual(sorted(h["match_span"][0] for h in hits), [0, 2])
         for h in hits:
-            self.assertEqual(h["overhang"]["type"], "3'-overhang")  # GCG^C
+            self.assertEqual(h["overhang"]["type"], "3'-overhang")
 
     def test_negative_cut_offset(self):
-        # DpnII ^GATC: c1 = -1 -> motifin hemen önünden keser
         hits = site(REFIND.find_sites("AAGATCAA", ["DpnII"]), "DpnII")
         self.assertEqual(len(hits), 1)
         self.assertEqual((hits[0]["cut_top"], hits[0]["cut_bottom"]), (2, 6))
 
     def test_non_palindromic_reverse_strand(self):
-        # BsaI: GGTCTC(1/5). Ters iplikteki GAGACC eşleşmesi düz iplikte motifin soluna keser.
         seq = "A" * 10 + "GAGACC" + "A" * 10
         hits = site(REFIND.find_sites(seq, ["BsaI"]), "BsaI")
         self.assertEqual(len(hits), 1)
@@ -102,7 +93,6 @@ class ParseLocationTest(unittest.TestCase):
         self.assertEqual(flip_segments([(1, 10), (50, 60)], 100), [(41, 51), (91, 100)])
 
 
-# Ters iplikte, 1000 bazlık sentetik bir gen (gerçek veri değildir).
 SYNTHETIC_FEATURES = [
     {"key": "source", "location": "1..1000", "quals": {}},
     {"key": "gene", "location": "complement(1..1000)", "quals": {"gene": "TEST1"}},
@@ -138,7 +128,6 @@ class BuildStructureTest(unittest.TestCase):
 
 
 class ApiTest(unittest.TestCase):
-    """NCBI cevapları taklit edilerek Flask uç noktaları test edilir."""
 
     SUMMARY = {
         "result": {
@@ -147,7 +136,6 @@ class ApiTest(unittest.TestCase):
                 "name": "TEST1", "description": "test gene", "chromosome": "16",
                 "maplocation": "16p13.3",
                 "organism": {"scientificname": "Homo sapiens", "commonname": "human", "taxid": 9606},
-                # ters iplik: chrstart > chrstop, 0 tabanlı
                 "genomicinfo": [{"chrloc": "16", "chraccver": "NC_TEST.1", "chrstart": 10999,
                                  "chrstop": 10000, "exoncount": 3}],
             },
@@ -204,12 +192,27 @@ class ApiTest(unittest.TestCase):
         r = self.client.get("/api/genes/999/sequence?start=1&end=10")
         self.assertEqual(r.status_code, 200)
         fetch = [p for e, p in self.calls if e == "efetch.fcgi"][0]
-        # genin ilk 10 bazı, ters iplikte genomik olarak en sondaki 10 baz
         self.assertEqual((fetch["seq_start"], fetch["seq_stop"], fetch["strand"]), (10991, 11000, 2))
 
     def test_sites_are_gene_relative(self):
         body = self.client.get("/api/genes/999/sites?start=101&end=200&enzymes=EcoRI").get_json()
         self.assertEqual(body["sites"][0]["cut_top"], 101)
+
+    def test_only_json_no_html(self):
+        r = self.client.get("/")
+        self.assertEqual(r.content_type, "application/json")
+        self.assertIn("/api/search?q=MEFV&organism=Homo sapiens", r.get_json()["endpoints"])
+        for url, method in [("/yok", "get"), ("/search", "post"), ("/api/search", "post")]:
+            r = getattr(self.client, method)(url)
+            self.assertIn(r.status_code, (404, 405))
+            self.assertEqual(r.content_type, "application/json")
+            self.assertIn("error", r.get_json())
+
+    def test_unexpected_error_is_json(self):
+        with mock.patch.object(self.refind, "fetch_gene_ids", side_effect=RuntimeError("boom")):
+            r = self.client.get("/api/search?q=TEST1")
+        self.assertEqual(r.status_code, 500)
+        self.assertEqual(r.content_type, "application/json")
 
     def test_validation_errors(self):
         self.assertEqual(self.client.get("/api/search").status_code, 400)

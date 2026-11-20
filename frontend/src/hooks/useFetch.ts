@@ -7,7 +7,6 @@ export type FetchState<T> =
   | { status: "error"; error: string }
   | { status: "success"; data: T };
 
-/** url null ise istek atılmaz. url değişince önceki istek iptal edilir. */
 export function useFetch<T>(url: string | null): FetchState<T> {
   const [state, setState] = useState<FetchState<T>>({ status: url ? "loading" : "idle" });
   const [prevUrl, setPrevUrl] = useState(url);
