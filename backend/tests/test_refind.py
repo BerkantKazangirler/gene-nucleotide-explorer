@@ -211,6 +211,22 @@ class ApiTest(unittest.TestCase):
         body = self.client.get("/api/genes/999/sites?start=101&end=200&enzymes=EcoRI").get_json()
         self.assertEqual(body["sites"][0]["cut_top"], 101)
 
+    def test_only_json_no_html(self):
+        r = self.client.get("/")
+        self.assertEqual(r.content_type, "application/json")
+        self.assertIn("/api/search?q=MEFV&organism=Homo sapiens", r.get_json()["endpoints"])
+        for url, method in [("/yok", "get"), ("/search", "post"), ("/api/search", "post")]:
+            r = getattr(self.client, method)(url)
+            self.assertIn(r.status_code, (404, 405))
+            self.assertEqual(r.content_type, "application/json")
+            self.assertIn("error", r.get_json())
+
+    def test_unexpected_error_is_json(self):
+        with mock.patch.object(self.refind, "fetch_gene_ids", side_effect=RuntimeError("boom")):
+            r = self.client.get("/api/search?q=TEST1")
+        self.assertEqual(r.status_code, 500)
+        self.assertEqual(r.content_type, "application/json")
+
     def test_validation_errors(self):
         self.assertEqual(self.client.get("/api/search").status_code, 400)
         self.assertEqual(self.client.get("/api/genes/999/sites?enzymes=Yok").status_code, 400)

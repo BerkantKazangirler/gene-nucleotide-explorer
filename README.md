@@ -56,6 +56,8 @@ python -m unittest discover tests
 
 ## 🔌 API
 
+Backend yalnızca JSON veri döndürür; arayüz tamamen `frontend/` klasöründeki React uygulamasındadır. Hatalar da `{"error": "..."}` biçiminde JSON olarak gelir. `http://127.0.0.1:5000/` adresi kullanılabilir uç noktaları listeler.
+
 Tüm gen koordinatları genin kendi okuma yönündedir (5′→3′), 1'den başlar ve `1..length` aralığındadır. Ters iplikteki genler otomatik olarak çevrilir.
 
 | Uç nokta | Açıklama |
