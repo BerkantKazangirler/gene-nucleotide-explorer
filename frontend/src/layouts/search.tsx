@@ -1,9 +1,14 @@
-import type { ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { useFetch } from "@/hooks/useFetch";
 import type { SearchResponse } from "@/types";
 import { formatLength } from "@/utils/format";
 
 const EXAMPLES = ["MEFV", "BRCA1", "TP53", "CFTR", "HBB"];
+const ORGANISMS = [
+  { value: "", label: "Tüm türler" },
+  { value: "Homo sapiens", label: "İnsan" },
+  { value: "Mus musculus", label: "Fare" },
+];
 
 interface Props {
   query: string;
@@ -17,6 +22,14 @@ export const SearchLayout = ({ query, organism, onSearch, onOpen }: Props) => {
     ? `/api/search?q=${encodeURIComponent(query)}${organism ? `&organism=${encodeURIComponent(organism)}` : ""}`
     : null;
   const state = useFetch<SearchResponse>(url);
+  const [text, setText] = useState(query);
+  const [org, setOrg] = useState(organism);
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const q = text.trim();
+    if (q) onSearch(q, org);
+  };
 
   if (!query) {
     return (
@@ -27,23 +40,62 @@ export const SearchLayout = ({ query, organism, onSearch, onOpen }: Props) => {
           tıklandığında genin kromozom üzerindeki yeri, transkriptleri, ekzon ve intron yapısı, proteine çevrilen bölgeleri
           ve nükleotid dizisi görüntülenir.
         </p>
-        <p className="mt-4 text-sm">
-          <span className="text-ink-soft">Örnek aramalar: </span>
-          {EXAMPLES.map((ex, i) => (
-            <span key={ex}>
-              {i > 0 && ", "}
-              <a
-                href={`?q=${ex}&organism=Homo+sapiens`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  onSearch(ex, "Homo sapiens");
-                }}
-              >
-                {ex}
-              </a>
-            </span>
-          ))}
-        </p>
+        <form onSubmit={submit} className="mt-6">
+          <div className="flex gap-2">
+            <label className="sr-only" htmlFor="home-q">
+              Gen sembolü veya numarası
+            </label>
+            <input
+              id="home-q"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Örneğin MEFV veya 4210"
+              autoComplete="off"
+              spellCheck={false}
+              autoFocus
+              className="flex-1 min-w-0 h-14 rounded-xl border border-line bg-paper px-4 text-lg font-medium placeholder:text-ink-soft/60 focus:outline-none focus:border-base-c"
+            />
+            <button className="h-14 px-6 rounded-xl bg-ink text-paper font-bold hover:bg-base-c transition-colors">Ara</button>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
+            <fieldset className="flex rounded-lg border border-line p-0.5 bg-paper">
+              <legend className="sr-only">Tür</legend>
+              {ORGANISMS.map((o) => (
+                <label
+                  key={o.value}
+                  className={`px-3 py-1.5 rounded-md cursor-pointer ${org === o.value ? "bg-ink text-paper" : "text-ink-soft hover:text-ink"}`}
+                >
+                  <input
+                    type="radio"
+                    name="organism"
+                    className="sr-only"
+                    checked={org === o.value}
+                    onChange={() => setOrg(o.value)}
+                  />
+                  {o.label}
+                </label>
+              ))}
+            </fieldset>
+            <div className="flex flex-wrap items-center gap-2 text-ink-soft">
+              <span>Dene:</span>
+              {EXAMPLES.map((ex) => (
+                <button
+                  type="button"
+                  key={ex}
+                  onClick={() => {
+                    setText(ex);
+                    setOrg("Homo sapiens");
+                    onSearch(ex, "Homo sapiens");
+                  }}
+                  className="font-mono text-[13px] px-2 py-1 rounded-md border border-line bg-paper text-ink hover:border-ink"
+                >
+                  {ex}
+                </button>
+              ))}
+            </div>
+          </div>
+        </form>
       </div>
     );
   }

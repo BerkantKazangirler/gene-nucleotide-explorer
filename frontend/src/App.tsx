@@ -36,6 +36,7 @@ function App() {
         key={`${query}|${organism}`}
         query={query}
         organism={organism}
+        showSearch={Boolean(query || geneId)}
         onHome={() => navigate({})}
         onSearch={(q, org) => navigate({ q, organism: org })}
       />
