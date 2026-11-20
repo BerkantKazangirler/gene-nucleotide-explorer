@@ -17,68 +17,70 @@ export const ExonInfo = ({ transcript: t, target, onPin, onShowBases }: Props) =
   if (!exon) {
     const share = codingShare(t);
     return (
-      <div className="grid sm:grid-cols-[1fr_auto] gap-4 items-center">
-        <p className="text-ink-soft">
-          <strong className="text-ink">{t.id}</strong> {t.product ? `(${t.product})` : ""} {t.exons.length} ekzondan
-          oluşuyor. Ekzonların toplam {formatNumber(share.total)} bazının {formatNumber(share.cds)} tanesi proteine
-          çevriliyor. Ayrıntı için haritada bir ekzonun üzerine gel ya da tıkla.
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+        <p>
+          <b>{t.id}</b>
+          {t.product && <span className="text-ink-soft"> {t.product}</span>}
+          <br />
+          {t.exons.length} ekzon, toplam {formatNumber(share.total)} baz; bunun {formatNumber(share.cds)} bazı proteine
+          çevrilir.
         </p>
-        <button onClick={() => go(1)} className="justify-self-start sm:justify-self-end px-3 py-2 rounded-lg border border-line bg-sheet hover:border-ink text-sm font-medium">
-          1. ekzondan başla
-        </button>
+        <Btn onClick={() => go(1)}>1. ekzonu seç</Btn>
       </div>
     );
   }
 
   const blocks = transcriptBlocks(t).filter((b) => b.exon === exon.number);
   const coding = blocks.filter((b) => b.kind === "cds").reduce((a, b) => a + b.end - b.start + 1, 0);
-  const kind =
-    coding === 0 ? "Bu ekzon proteine çevrilmiyor (UTR)." : coding === exon.length ? "Tamamı proteine çevriliyor (CDS)." : "Bir kısmı proteine çevriliyor.";
+  const kind = coding === 0 ? "UTR" : coding === exon.length ? "CDS" : "kısmen CDS";
 
   return (
-    <div className="grid sm:grid-cols-[1fr_auto] gap-4 items-center">
-      <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-2">
-        <Fact label="Ekzon">
-          {exon.number} / {t.exons.length}
-        </Fact>
-        <Fact label="Gen içindeki konum">
-          {formatNumber(exon.start)}–{formatNumber(exon.end)}
-        </Fact>
-        <Fact label="Uzunluk">{formatNumber(exon.length)} baz</Fact>
-        <Fact label="Kodlayan kısım">{formatNumber(coding)} baz</Fact>
-        <p className="col-span-full text-sm text-ink-soft">{kind}</p>
-      </dl>
-      <div className="flex flex-wrap gap-2 justify-self-start sm:justify-self-end">
-        {onShowBases && (
-          <button
-            onClick={() => onShowBases(exon.number)}
-            className="px-3 py-2 rounded-lg bg-ink text-sheet hover:bg-base-c text-sm font-bold"
-          >
-            Baz çiftlerini göster
-          </button>
-        )}
-        <button
-          onClick={() => go(exon.number - 1)}
-          disabled={exon.number <= 1}
-          className="px-3 py-2 rounded-lg border border-line bg-sheet hover:border-ink disabled:opacity-40 text-sm font-medium"
-        >
-          Önceki ekzon
-        </button>
-        <button
-          onClick={() => go(exon.number + 1)}
-          disabled={exon.number >= t.exons.length}
-          className="px-3 py-2 rounded-lg border border-line bg-sheet hover:border-ink disabled:opacity-40 text-sm font-medium"
-        >
-          Sonraki ekzon
-        </button>
+    <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+      <div className="overflow-x-auto max-w-full">
+        <table>
+          <tbody>
+            <tr className="text-ink-soft">
+              <Cell>Ekzon</Cell>
+              <Cell>Konum (gen içi)</Cell>
+              <Cell>Uzunluk</Cell>
+              <Cell>Kodlayan</Cell>
+              <Cell>Tür</Cell>
+            </tr>
+            <tr className="font-semibold">
+              <Cell>
+                {exon.number} / {t.exons.length}
+              </Cell>
+              <Cell>
+                {formatNumber(exon.start)}–{formatNumber(exon.end)}
+              </Cell>
+              <Cell>{formatNumber(exon.length)} baz</Cell>
+              <Cell>{formatNumber(coding)} baz</Cell>
+              <Cell>{kind}</Cell>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Btn onClick={() => go(exon.number - 1)} disabled={exon.number <= 1}>
+          Önceki
+        </Btn>
+        <Btn onClick={() => go(exon.number + 1)} disabled={exon.number >= t.exons.length}>
+          Sonraki
+        </Btn>
+        {onShowBases && <Btn onClick={() => onShowBases(exon.number)}>Baz çiftlerini göster</Btn>}
       </div>
     </div>
   );
 };
 
-const Fact = ({ label, children }: { label: string; children: ReactNode }) => (
-  <div>
-    <dt className="text-sm text-ink-soft">{label}</dt>
-    <dd className="font-display font-bold text-xl">{children}</dd>
-  </div>
+const Cell = ({ children }: { children: ReactNode }) => <td className="pr-6 py-0.5 whitespace-nowrap">{children}</td>;
+
+const Btn = ({ children, onClick, disabled }: { children: ReactNode; onClick: () => void; disabled?: boolean }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className="h-8 px-3 border border-line rounded bg-paper hover:border-ink disabled:opacity-40 disabled:hover:border-line"
+  >
+    {children}
+  </button>
 );

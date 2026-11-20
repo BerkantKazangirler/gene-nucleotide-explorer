@@ -8,23 +8,16 @@ export const ChromosomeBar = ({ gene }: { gene: GeneSummary }) => {
   const width = Math.max(((gene.seq_stop - gene.seq_start) / total) * 100, 0.4);
 
   return (
-    <figure className="mt-8">
-      <div className="relative h-5">
-        <div className="absolute inset-y-1 left-0 right-0 rounded-full bg-line" />
-        <div
-          className="absolute -inset-y-0.5 rounded-sm bg-base-t"
-          style={{ left: `${left}%`, width: `max(${width}%, 3px)` }}
-          aria-hidden
-        />
+    <div className="max-w-md">
+      <div className="relative h-3 mt-1 bg-line rounded-sm" aria-hidden>
+        <div className="absolute inset-y-0 bg-base-t" style={{ left: `${left}%`, width: `max(${width}%, 2px)` }} />
       </div>
-      <figcaption className="mt-2 flex justify-between text-sm text-ink-soft gap-4">
+      <div className="mt-1 flex justify-between text-[12px] text-ink-soft">
+        <span>0</span>
         <span>
-          {gene.chromosome}. kromozom, toplam {formatLength(total)}
+          Kromozom {gene.chromosome}, {formatLength(total)}
         </span>
-        <span className="text-right">
-          {gene.name} burada: {formatLength(gene.seq_start)} konumundan itibaren
-        </span>
-      </figcaption>
-    </figure>
+      </div>
+    </div>
   );
 };

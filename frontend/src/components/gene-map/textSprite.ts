@@ -1,6 +1,6 @@
 import * as THREE from "three";
 
-const FONT = `"Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif`;
+const FONT = `"Public Sans", system-ui, sans-serif`;
 const cache = new Map<string, { texture: THREE.CanvasTexture; aspect: number }>();
 
 export function textTexture(text: string, color: string, weight = 600) {

@@ -27,11 +27,19 @@ function App() {
   }, []);
 
   const geneId = params.get("gene");
+  const query = params.get("q") ?? "";
+  const organism = params.get("organism") ?? "";
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Navbar onHome={() => navigate({})} />
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 pb-16">
+      <Navbar
+        key={`${query}|${organism}`}
+        query={query}
+        organism={organism}
+        onHome={() => navigate({})}
+        onSearch={(q, org) => navigate({ q, organism: org })}
+      />
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 pb-12">
         {geneId ? (
           <DetailLayout
             key={geneId}
@@ -40,9 +48,9 @@ function App() {
           />
         ) : (
           <SearchLayout
-            query={params.get("q") ?? ""}
-            organism={params.get("organism") ?? ""}
-            onSearch={(q, organism) => navigate({ q, organism })}
+            query={query}
+            organism={organism}
+            onSearch={(q, org) => navigate({ q, organism: org })}
             onOpen={(id) => navigate({ gene: id })}
           />
         )}
