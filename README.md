@@ -34,6 +34,7 @@ python app.py                      # http://127.0.0.1:5000
 
 - `NCBI_API_KEY`: NCBI hız sınırını saniyede 3 istekten 10 isteğe çıkarır.
 - `NCBI_EMAIL`: NCBI'ın istekle birlikte gönderilmesini istediği iletişim adresi.
+- `CORS_ORIGINS`: API'ye tarayıcıdan istek atabilecek adresler, virgülle ayrılmış (ör. `https://gne.berkantkazangirler.tech`). Varsayılan `*` (her yer).
 
 **Frontend:**
 
@@ -43,7 +44,12 @@ npm install
 npm run dev                        # http://localhost:5173
 ```
 
-Geliştirme sırasında `/api` istekleri Vite tarafından Flask'a yönlendirilir. Backend adresi `frontend/.env` dosyasındaki `VITE_API_URL` değişkeninden okunur (örnek: `frontend/.env.example`). Dosya yoksa `http://127.0.0.1:5000` kullanılır.
+API adresi `VITE_API_URL` değişkeninden okunur:
+
+- Geliştirme: `frontend/.env` (örnek: `frontend/.env.example`, `http://127.0.0.1:5000`)
+- Canlı build: `frontend/.env.production` (`https://gne-api.berkantkazangirler.tech`)
+
+Değişken build sırasında koda gömülür; adres değişirse frontend yeniden build edilmelidir.
 
 **Testler** (internet bağlantısı gerektirmez):
 

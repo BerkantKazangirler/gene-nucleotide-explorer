@@ -208,6 +208,12 @@ class ApiTest(unittest.TestCase):
             self.assertEqual(r.content_type, "application/json")
             self.assertIn("error", r.get_json())
 
+    def test_cors_header(self):
+        r = self.client.get("/api/health", headers={"Origin": "https://gne.berkantkazangirler.tech"})
+        self.assertEqual(r.headers.get("Access-Control-Allow-Origin"), "*")
+        r = self.client.options("/api/search", headers={"Origin": "https://gne.berkantkazangirler.tech"})
+        self.assertIn("GET", r.headers.get("Access-Control-Allow-Methods", ""))
+
     def test_unexpected_error_is_json(self):
         with mock.patch.object(self.refind, "fetch_gene_ids", side_effect=RuntimeError("boom")):
             r = self.client.get("/api/search?q=TEST1")

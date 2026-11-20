@@ -1,4 +1,6 @@
-from flask import Flask, jsonify
+import os
+
+from flask import Flask, jsonify, request
 from werkzeug.exceptions import HTTPException
 
 import api
@@ -10,6 +12,20 @@ refind = ReFind()
 
 api.refind = refind
 app.register_blueprint(api.api)
+
+CORS_ORIGINS = [o.strip().rstrip("/") for o in os.environ.get("CORS_ORIGINS", "*").split(",") if o.strip()]
+
+
+@app.after_request
+def cors(response):
+    origin = request.headers.get("Origin")
+    if "*" in CORS_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = "*"
+    elif origin and origin.rstrip("/") in CORS_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers.add("Vary", "Origin")
+    response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    return response
 
 
 @app.get("/")
