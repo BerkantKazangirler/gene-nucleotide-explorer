@@ -13,7 +13,6 @@ export async function fetchData<T = unknown>(url: string, signal?: AbortSignal):
       const body = await response.json();
       if (body?.error) message = body.error;
     } catch {
-      // JSON olmayan hata cevabı; varsayılan mesaj kalır
     }
     throw new Error(message);
   }

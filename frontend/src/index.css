@@ -1,10 +1,5 @@
 @import "tailwindcss";
 
-/*
-  Renkler DNA dizileme (Sanger kromatogram) geleneğinden gelir:
-  A = yeşil, C = mavi, G = grafit, T = kırmızı.
-  Haritada: CDS = mavi, UTR = yeşil, intron = grafit, seçim = kırmızı.
-*/
 @theme {
   --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;

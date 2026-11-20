@@ -12,7 +12,6 @@ import requests
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 DB_PATH = Path(__file__).resolve().parent / "database" / "emboss_e.dat"
 
-# GRCh38 kromozom uzunlukları (baz çifti). Sadece insan genleri için kullanılır.
 HUMAN_CHROMOSOME_LENGTHS = {
     "1": 248956422, "2": 242193529, "3": 198295559, "4": 190214555,
     "5": 181538259, "6": 170805979, "7": 159345973, "8": 145138636,
@@ -23,7 +22,6 @@ HUMAN_CHROMOSOME_LENGTHS = {
     "MT": 16569,
 }
 
-# Laboratuvarlarda en sık kullanılan, kesim noktası bilinen enzimler.
 COMMON_ENZYMES = [
     "EcoRI", "BamHI", "HindIII", "NotI", "XhoI", "PstI", "SalI", "SmaI",
     "KpnI", "SacI", "XbaI", "NcoI", "NdeI", "EcoRV", "SpeI", "BglII",
@@ -32,32 +30,13 @@ COMMON_ENZYMES = [
 
 
 class NCBIError(Exception):
-    """NCBI'a ulaşılamadığında veya beklenmeyen bir cevap döndüğünde fırlatılır."""
+    pass
 
-
-# ---------------------------------------------------------------------------
-# GenBank konum metni ayrıştırıcı
-# ---------------------------------------------------------------------------
 
 _RANGE_RE = re.compile(r"^(<?)(\d+)(?:(\.\.|\^)(>?)(\d+))?(>?)$")
 
 
 def parse_location(location: str) -> dict:
-    """
-    GenBank konum metnini yapılandırılmış hale getirir.
-
-    Örnekler:
-        "1..500"                         -> strand +1, [(1, 500)]
-        "join(1..120,4500..4700)"        -> strand +1, [(1, 120), (4500, 4700)]
-        "complement(join(5..9,20..30))"  -> strand -1, [(5, 9), (20, 30)]
-        "<1..>300"                       -> uçları eksik (partial) bölge
-
-    Dönüş:
-        {"strand": 1 | -1, "segments": [(start, end), ...],
-         "partial_start": bool, "partial_end": bool}
-    Segmentler her zaman artan koordinat sırasında döner (1 tabanlı, uçlar dahil).
-    Başka bir kayda referans veren parçalar (ör. "NC_000016.10:1..5") atlanır.
-    """
     text = (location or "").replace(" ", "")
     strand = 1
     while text.startswith("complement(") and text.endswith(")"):
@@ -88,7 +67,7 @@ def parse_location(location: str) -> dict:
         start = int(a)
         end = int(b) if b else start
         if sep == "^":
-            end = start  # iki baz arasındaki nokta; tek baz gibi ele alınır
+            end = start
         if inner_strand == -1 and strand == 1:
             strand = -1
         partial_start |= bool(lt)
@@ -129,17 +108,11 @@ def _split_top_level(text: str) -> List[str]:
 
 
 def flip_segments(segments: List[Tuple[int, int]], length: int) -> List[Tuple[int, int]]:
-    """Ters iplikteki bir gen için koordinatları genin kendi okuma yönüne (5'→3') çevirir."""
     flipped = [(length - end + 1, length - start + 1) for start, end in segments]
     return sorted(flipped)
 
 
-# ---------------------------------------------------------------------------
-# Ana sınıf
-# ---------------------------------------------------------------------------
-
 class ReFind:
-    # IUPAC belirsizlik kodları
     IUPAC = {
         'A': 'A', 'C': 'C', 'G': 'G', 'T': 'T', 'U': 'T',
         'R': '[AG]', 'Y': '[CT]', 'S': '[GC]', 'W': '[AT]', 'K': '[GT]', 'M': '[AC]',
@@ -154,19 +127,13 @@ class ReFind:
         self.enzymes = self._load_emboss_enzymes(emboss_path or DB_PATH)
         self.api_key = os.environ.get("NCBI_API_KEY", "").strip()
         self.email = os.environ.get("NCBI_EMAIL", "").strip()
-        # API anahtarı yoksa NCBI saniyede 3, varsa 10 isteğe izin verir.
         self.min_interval = 0.11 if self.api_key else 0.34
         self.session = requests.Session()
         self._cache: "OrderedDict[tuple, str]" = OrderedDict()
         self._cache_size = cache_size
 
-    # ------------------------------------------------------------------ HTTP
 
     def _get(self, endpoint: str, params: dict, timeout: int = 15) -> str:
-        """
-        NCBI'a GET isteği atar. Aynı istek daha önce yapıldıysa önbellekten döner,
-        istekler arasında NCBI hız sınırına uyacak kadar bekler, 429 gelirse bir kez yeniden dener.
-        """
         params = dict(params)
         params["tool"] = "ReFinder"
         if self.email:
@@ -202,7 +169,6 @@ class ReFind:
             self._cache.popitem(last=False)
         return r.text
 
-    # ------------------------------------------------------------ enzimler
 
     @classmethod
     def _pattern_to_regex(cls, pat: str) -> str:
@@ -216,7 +182,6 @@ class ReFind:
 
     @staticmethod
     def _overhang_info(top: int, bottom: int) -> Tuple[str, int]:
-        """Üst iplik kesimi alt iplikten önceyse 5' uç, sonraysa 3' uç açıkta kalır."""
         if top == bottom:
             return ('blunt', 0)
         if top < bottom:
@@ -225,10 +190,6 @@ class ReFind:
 
     @staticmethod
     def _cut_offset(c: int) -> int:
-        """
-        EMBOSS numaralandırmasında 0 yoktur (... -2 -1 1 2 ...) ve kesim, verilen bazın sağındadır.
-        Bu fonksiyon değeri motifin başlangıcına göre "kesimin solunda kalan baz sayısı"na çevirir.
-        """
         return c if c > 0 else c + 1
 
     def _load_emboss_enzymes(self, path) -> Dict[str, dict]:
@@ -247,18 +208,11 @@ class ReFind:
                     'ncuts': int(ncuts),
                     'blunt': bool(int(blunt)),
                     'cuts': [int(c1), int(c2), int(c3), int(c4)],
-                    # lookahead: örtüşen tanıma bölgelerini de yakalar (ör. GCGCGC içinde iki HhaI)
                     'regex': re.compile(f"(?=({self._pattern_to_regex(pattern)}))", re.IGNORECASE),
                 }
         return enzymes
 
     def find_sites(self, sequence: str, enzyme_subset: Iterable[str] = None) -> List[dict]:
-        """
-        Dizide verilen enzimlerin kesim noktalarını bulur (iki iplik de taranır).
-
-        Konumlar 0 tabanlı "sınır" olarak döner: cut_top = 5 ise üst iplik 5. bazdan sonra kesilir.
-        Kesim noktası bilinmeyen (ncuts = 0) enzimler sonuç üretmez.
-        """
         seq = sequence.upper()
         L = len(seq)
         rc = self._revcomp(seq)
@@ -272,7 +226,7 @@ class ReFind:
                 return
             key = (name, site_idx, top, bottom)
             if key in events:
-                return  # palindromik motif iki iplikte de aynı yerde eşleşir
+                return
             otype, olen = self._overhang_info(top, bottom)
             events[key] = {
                 'enzyme': name,
@@ -306,7 +260,6 @@ class ReFind:
                 s_rc = m.start()
                 start_fwd = L - (s_rc + patlen)
                 for idx, ct, cb in pairs:
-                    # Ters iplikteki "üst" kesim, düz iplikte alt ipliğe denk gelir.
                     bottom = L - (s_rc + off(ct))
                     top = L - (s_rc + off(cb))
                     add(name, e, idx, start_fwd, top, bottom, -1)
@@ -322,13 +275,8 @@ class ReFind:
             if not only_with_cuts or e['ncuts'] >= 2
         ]
 
-    # ---------------------------------------------------------------- NCBI
 
     def fetch_gene_ids(self, symbol: str, organism: str = "", retmax: int = 10000) -> List[str]:
-        """
-        NCBI E-utilities üzerinden verilen gen sembolü (symbol) ve opsiyonel organizma
-        adı için GeneID listesi döndürür.
-        """
         if organism:
             term = f'{symbol}[Gene Name] AND "{organism}"[Organism]'
         else:
@@ -338,7 +286,6 @@ class ReFind:
         return re.findall(r"<Id>(\d+)</Id>", text)
 
     def gene_summaries(self, gene_ids: Iterable) -> List[dict]:
-        """Birden fazla GeneID için özeti tek bir esummary isteğiyle getirir."""
         ids = [str(int(g)) for g in gene_ids]
         if not ids:
             return []
@@ -348,10 +295,6 @@ class ReFind:
         return [self._summary_from_doc(gid, result.get(gid, {})) for gid in ids if gid in result]
 
     def gene_summary_json(self, gene_id: int) -> dict:
-        """
-        Verilen GeneID için NCBI eSummary (JSON) çağrısı yapar ve
-        GeneSummaryManager'daki alan adlarıyla aynı isimlerde bir dict döndürür.
-        """
         found = self.gene_summaries([gene_id])
         if not found:
             raise NCBIError(f"GeneID {gene_id} bulunamadı")
@@ -360,7 +303,6 @@ class ReFind:
     @staticmethod
     def _summary_from_doc(gene_id: str, doc: dict) -> dict:
         ginfo = None
-        # 'genomicinfo' genelde liste oluyor; ilk elemanı kullanıyoruz
         if isinstance(doc.get("genomicinfo"), list) and doc["genomicinfo"]:
             ginfo = doc["genomicinfo"][0]
         elif isinstance(doc.get("genomicinfo"), dict):
@@ -383,7 +325,6 @@ class ReFind:
             "location":            gi("chrloc"),
             "accession":           gi("chraccver"),
             "exon_count":          to_int(gi("exoncount")),
-            # NCBI'ın ham değerleri: 0 tabanlı, ters iplikte start > stop
             "start":               start,
             "stop":                stop,
             "name":                doc.get("name"),
@@ -403,7 +344,6 @@ class ReFind:
             "organism":            organism.get("scientificname"),
             "organism_common":     organism.get("commonname"),
             "tax_id":              organism.get("taxid"),
-            # Normalleştirilmiş koordinatlar: 1 tabanlı, seq_start <= seq_stop
             "seq_start":           None,
             "seq_stop":            None,
             "strand":              None,
@@ -417,11 +357,6 @@ class ReFind:
         return result
 
     def gene_sequence(self, accession: str, start: int, stop: int, strand: int = 1) -> str:
-        """
-        NCBI efetch (nuccore) ile verilen erişim numarası (accession) ve
-        start/stop koordinatlarına (1 tabanlı) karşılık gelen nükleotid dizisini döndürür.
-        strand=2 verilirse dizi ters-tamamlayıcı olarak gelir. Dönüş: büyük harf, 5'→3'.
-        """
         params = {
             "db": "nuccore", "id": accession, "strand": int(strand),
             "seq_start": int(start), "seq_stop": int(stop), "rettype": "fasta", "retmode": "text",
@@ -434,10 +369,6 @@ class ReFind:
         return seq
 
     def get_gene_features(self, accession: str, start: int, stop: int, timeout: int = 30) -> List[dict]:
-        """
-        NCBI efetch (nuccore) ile verilen accession, start, stop için features listesi döndürür.
-        Konumlar istenen bölgeye göredir (bölgenin ilk bazı = 1).
-        """
         params = {
             "db": "nuccore", "id": accession, "strand": 1,
             "seq_start": start, "seq_stop": stop, "rettype": "gb", "retmode": "xml",
@@ -464,7 +395,6 @@ class ReFind:
                             value_el = qual.find("GBQualifier_value")
                             name = name_el.text if name_el is not None else ""
                             value = value_el.text if value_el is not None else ""
-                            # db_xref gibi alanlar birden fazla kez tekrar edebilir
                             if name in quals and value:
                                 quals[name] = f"{quals[name]}; {value}"
                             else:
@@ -473,13 +403,8 @@ class ReFind:
                 features.append(feature)
         return features
 
-    # ------------------------------------------------ gen yapısı (harita)
 
     def gene_structure(self, gene_id: int) -> dict:
-        """
-        Gen haritası için yapılandırılmış veri döndürür. Tüm koordinatlar genin kendi
-        okuma yönündedir (5'→3') ve 1..length aralığındadır; ters iplikteki genler çevrilir.
-        """
         summary = self.gene_summary_json(gene_id)
         if not summary.get("seq_start"):
             raise NCBIError("Bu genin genomik konumu yok.")
@@ -491,7 +416,6 @@ class ReFind:
         return build_structure(raw, length=length, minus=minus, symbol=symbol, summary=summary)
 
     def gene_window_sequence(self, summary: dict, start: int, end: int) -> str:
-        """Genin kendi koordinatlarında (1..length) verilen penceredeki diziyi döndürür."""
         if summary["strand"] == -1:
             g_start = summary["seq_stop"] - end + 1
             g_stop = summary["seq_stop"] - start + 1
@@ -503,10 +427,6 @@ class ReFind:
 
 def build_structure(raw_features: List[dict], length: int, minus: bool,
                     symbol: Optional[str] = None, summary: Optional[dict] = None) -> dict:
-    """
-    efetch'ten gelen ham özellik listesinden transkript (mRNA/ncRNA), ekzon ve CDS yapısını kurar.
-    Ayrı fonksiyon olmasının sebebi NCBI'a gitmeden test edilebilmesidir.
-    """
     def norm(segments):
         return flip_segments(segments, length) if minus else list(segments)
 
@@ -559,7 +479,6 @@ def build_structure(raw_features: List[dict], length: int, minus: bool,
                 "end": segs[-1][1],
             })
 
-    # Her mRNA'ya, ekzonlarıyla uyumlu ilk kullanılmamış CDS'i eşleştir.
     for t in transcripts:
         if t["type"] != "mRNA":
             continue
@@ -584,13 +503,11 @@ def build_structure(raw_features: List[dict], length: int, minus: bool,
 
 
 def _cds_fits(cds: dict, exons: List[dict]) -> bool:
-    """CDS'in her parçası bir ekzonun içinde mi ve ekzon sınırlarıyla uyumlu mu?"""
     segs = cds["segments"]
     for i, seg in enumerate(segs):
         host = next((e for e in exons if e["start"] <= seg["start"] and seg["end"] <= e["end"]), None)
         if host is None:
             return False
-        # İç kenarlar (splice noktaları) ekzon sınırına denk gelmeli
         if i > 0 and seg["start"] != host["start"]:
             return False
         if i < len(segs) - 1 and seg["end"] != host["end"]:

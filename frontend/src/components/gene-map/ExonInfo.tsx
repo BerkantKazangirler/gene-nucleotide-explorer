@@ -10,7 +10,6 @@ interface Props {
   onShowBases?: (exon: number) => void;
 }
 
-/** Üzerine gelinen ya da seçilen ekzonun ayrıntıları; seçim yoksa transkriptin genel özeti. */
 export const ExonInfo = ({ transcript: t, target, onPin, onShowBases }: Props) => {
   const exon = target && target.transcriptId === t.id ? t.exons.find((e) => e.number === target.exon) : undefined;
   const go = (n: number) => onPin({ transcriptId: t.id, exon: n });

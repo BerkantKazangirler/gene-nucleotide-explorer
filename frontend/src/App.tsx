@@ -4,7 +4,6 @@ import { Navbar } from "./components/navbar";
 import { DetailLayout } from "./layouts/detail";
 import { SearchLayout } from "./layouts/search";
 
-/** Sayfa durumu URL'de tutulur: ?q=MEFV (arama) veya ?gene=4210 (detay). Böylece link paylaşılabilir. */
 function readParams() {
   return new URLSearchParams(window.location.search);
 }

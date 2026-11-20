@@ -3,10 +3,6 @@ import * as THREE from "three";
 const FONT = `"Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif`;
 const cache = new Map<string, { texture: THREE.CanvasTexture; aspect: number }>();
 
-/**
- * Metni bir canvas'a yazıp doku (texture) olarak döndürür. Aynı metin ve renk tekrar istenirse
- * önbellekten gelir; baz harfleri gibi yüzlerce kez kullanılan etiketler için önemlidir.
- */
 export function textTexture(text: string, color: string, weight = 600) {
   const key = `${text}|${color}|${weight}`;
   const hit = cache.get(key);
@@ -33,7 +29,6 @@ export function textTexture(text: string, color: string, weight = 600) {
   return entry;
 }
 
-/** Her zaman kameraya dönük duran metin (three.js nesnesi olarak; react-force-graph de kullanır). */
 export function makeTextSprite(text: string, color: string, size: number) {
   const { texture, aspect } = textTexture(text, color);
   const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false });

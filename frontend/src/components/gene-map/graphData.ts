@@ -9,11 +9,9 @@ export interface GeneNode {
   kind: NodeKind;
   label: string;
   tooltip: string;
-  /** Ekzon düğümü için: transkript id -> o transkriptteki ekzon numarası */
   exonIn?: Record<string, number>;
   coding?: boolean;
   length?: number;
-  /** Protein düğümü için: onu kodlayan transkriptler */
   transcripts?: string[];
 }
 
@@ -26,11 +24,6 @@ export interface GeneLink {
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
-/**
- * Gen → transkript → ekzon → protein ilişki ağı.
- * Aynı koordinatlara sahip ekzonlar tek düğümdür; böylece hangi ekzonun hangi transkriptlerde
- * tekrar kullanıldığı (alternatif kırpılma) ağda doğrudan görünür.
- */
 export function buildGraph(symbol: string, transcripts: Transcript[]) {
   const nodes = new Map<string, GeneNode>();
   const links: GeneLink[] = [];
@@ -43,7 +36,6 @@ export function buildGraph(symbol: string, transcripts: Transcript[]) {
     tooltip: `<b>${esc(symbol)}</b><br>${transcripts.length} transkript`,
   });
 
-  // Benzersiz ekzonları konuma göre numarala (E1, E2, ...)
   const unique = new Map<string, { start: number; end: number }>();
   for (const t of transcripts) for (const e of t.exons) unique.set(`${e.start}-${e.end}`, { start: e.start, end: e.end });
   const order = [...unique.entries()].sort((a, b) => a[1].start - b[1].start || a[1].end - b[1].end);

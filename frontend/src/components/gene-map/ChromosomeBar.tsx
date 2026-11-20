@@ -1,7 +1,6 @@
 import type { GeneSummary } from "@/types";
 import { formatLength } from "@/utils/format";
 
-/** Genin kromozom üzerindeki yerini gösteren küçük çubuk (şimdilik sadece insan genleri için). */
 export const ChromosomeBar = ({ gene }: { gene: GeneSummary }) => {
   const total = gene.chromosome_length;
   if (!total || !gene.seq_start || !gene.seq_stop) return null;

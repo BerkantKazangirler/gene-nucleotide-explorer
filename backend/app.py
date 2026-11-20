@@ -1,6 +1,3 @@
-"""
-ReFinder backend: sadece JSON veri sunar. Arayüz React uygulamasındadır (frontend/).
-"""
 from flask import Flask, jsonify
 from werkzeug.exceptions import HTTPException
 
@@ -8,7 +5,7 @@ import api
 from refind_utils import ReFind
 
 app = Flask(__name__)
-app.json.ensure_ascii = False  # Türkçe karakterler ç yerine ç olarak dönsün
+app.json.ensure_ascii = False
 refind = ReFind()
 
 api.refind = refind
@@ -17,7 +14,6 @@ app.register_blueprint(api.api)
 
 @app.get("/")
 def index():
-    """Kök adres: kullanılabilir uç noktaların listesi."""
     return jsonify({
         "name": "ReFinder API",
         "endpoints": [
@@ -34,7 +30,6 @@ def index():
 
 @app.errorhandler(HTTPException)
 def http_error(e: HTTPException):
-    """404, 405 gibi hatalar da HTML yerine JSON döner."""
     return jsonify({"error": e.description}), e.code
 
 

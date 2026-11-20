@@ -4,7 +4,7 @@ import { formatNumber, niceStep } from "@/utils/format";
 import { transcriptBlocks, type HoverTarget } from "./geometry";
 
 const VB_W = 1000;
-const LABEL_W = 132; // solda transkript adları için ayrılan alan
+const LABEL_W = 132;
 const PAD_X = 12;
 const RULER_H = 30;
 const ROW_H = 34;
@@ -20,7 +20,6 @@ interface Props {
   onSelectTranscript: (id: string) => void;
 }
 
-/** 3B sahnenin altında, aynı veriyi kesin koordinatlarla gösteren düz şerit. */
 export const GeneTrack = ({ length, transcripts, selectedId, hovered, pinned, onHover, onPin, onSelectTranscript }: Props) => {
   const x = (pos: number) => LABEL_W + ((pos - 1) / length) * (VB_W - LABEL_W - PAD_X);
   const ticks = useMemo(() => {
@@ -41,7 +40,6 @@ export const GeneTrack = ({ length, transcripts, selectedId, hovered, pinned, on
         aria-label="Transkriptlerin düz haritası"
         onMouseLeave={() => onHover(null)}
       >
-        {/* cetvel */}
         <line x1={x(1)} x2={x(length)} y1={RULER_H - 8} y2={RULER_H - 8} stroke="var(--color-line)" />
         {ticks.map((p) => (
           <g key={p}>
@@ -82,7 +80,6 @@ export const GeneTrack = ({ length, transcripts, selectedId, hovered, pinned, on
                   />
                 );
               })}
-              {/* görünmez, daha geniş tıklama alanları: kısa ekzonları yakalamayı kolaylaştırır */}
               {t.exons.map((e) => {
                 const w = Math.max(x(e.end + 1) - x(e.start), 8);
                 return (

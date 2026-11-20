@@ -11,7 +11,6 @@ import { fetchData } from "@/utils/fetchData";
 import { formatLength, formatNumber } from "@/utils/format";
 import { Notice } from "./search";
 
-// three.js büyük bir kütüphane; 3B görünümler sadece detay sayfası açılınca yüklenir
 const GeneScene = lazy(() => import("@/components/gene-map/GeneScene"));
 const GeneGraph = lazy(() => import("@/components/gene-map/GeneGraph"));
 
@@ -117,7 +116,7 @@ type BasesState =
   | { status: "error"; exon: number; error: string }
   | { status: "ready"; exon: number; data: BaseWindow };
 
-const BASE_WINDOW = 60; // yakın görünümde gösterilen baz çifti sayısı
+const BASE_WINDOW = 60;
 
 const GeneMap = ({ structure, geneId }: { structure: GeneStructure; geneId: string }) => {
   const transcripts = useMemo(() => sortTranscripts(structure.transcripts), [structure]);
@@ -137,17 +136,14 @@ const GeneMap = ({ structure, geneId }: { structure: GeneStructure; geneId: stri
     setBases({ status: "idle" });
   };
 
-  /** Ekzonun çevresinden 60 bazlık bir pencere seçip gerçek diziyi NCBI'dan ister. */
   const showBases = async (exonNumber: number) => {
     const exon = selected.exons.find((e) => e.number === exonNumber);
     if (!exon) return;
     const L = structure.length;
     let start: number;
     if (exon.length <= BASE_WINDOW - 16) {
-      // kısa ekzon: tamamı ve iki yanındaki intron sınırı görünsün
       start = Math.round((exon.start + exon.end) / 2) - BASE_WINDOW / 2;
     } else {
-      // uzun ekzon: intron-ekzon sınırından başla
       start = exon.start - 8;
     }
     start = Math.max(1, Math.min(start, L - BASE_WINDOW + 1));
@@ -206,7 +202,6 @@ const GeneMap = ({ structure, geneId }: { structure: GeneStructure; geneId: stri
           )}
         </Suspense>
 
-        {/* üst şerit: açıklama + görünüm seçimi */}
         <div className="absolute top-3 left-3 right-3 flex flex-wrap gap-3 justify-between items-start pointer-events-none">
           <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm bg-stage/80 rounded-lg px-3 py-2 max-w-full">
             {inBases ? (
@@ -270,7 +265,6 @@ const GeneMap = ({ structure, geneId }: { structure: GeneStructure; geneId: stri
           </div>
         </div>
 
-        {/* alt şerit: duruma göre yardım, yükleniyor, baz bilgisi ve eylemler */}
         <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2 justify-between items-end pointer-events-none">
           <p className="text-xs sm:text-sm text-[#9fb4bd] bg-stage/70 rounded-md px-2 py-1" aria-live="polite">
             {view === "graph" &&

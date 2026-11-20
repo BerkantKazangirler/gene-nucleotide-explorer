@@ -1,17 +1,12 @@
-"""
-React arayüzünün kullandığı JSON uç noktaları.
-
-Tüm gen koordinatları genin kendi okuma yönündedir (5'→3'), 1 tabanlıdır ve 1..length aralığındadır.
-"""
 from flask import Blueprint, jsonify, request
 
 from refind_utils import COMMON_ENZYMES, HUMAN_CHROMOSOME_LENGTHS, NCBIError, ReFind
 
-MAX_WINDOW = 5000      # tek seferde istenebilecek en uzun dizi penceresi (baz)
-MAX_RESULTS = 20       # arama sonucunda dönecek en fazla gen
+MAX_WINDOW = 5000
+MAX_RESULTS = 20
 
 api = Blueprint("api", __name__, url_prefix="/api")
-refind: ReFind = None  # app.py tarafından atanır
+refind: ReFind = None
 
 
 class ApiError(Exception):
@@ -81,10 +76,6 @@ def health():
 
 @api.get("/search")
 def search():
-    """
-    /api/search?q=MEFV&organism=Homo sapiens&limit=10
-    q bir sayıysa doğrudan GeneID olarak kabul edilir.
-    """
     q = (request.args.get("q") or "").strip()
     if not q:
         raise ApiError("'q' parametresi gerekli")
@@ -132,7 +123,6 @@ def structure(gene_id: int):
 
 @api.get("/genes/<int:gene_id>/sequence")
 def sequence(gene_id: int):
-    """/api/genes/4210/sequence?start=1&end=500  (genin kendi koordinatları)"""
     summary = _summary_or_404(gene_id)
     start, end = _window(summary)
     seq = refind.gene_window_sequence(summary, start, end)
@@ -141,10 +131,6 @@ def sequence(gene_id: int):
 
 @api.get("/genes/<int:gene_id>/sites")
 def sites(gene_id: int):
-    """
-    /api/genes/4210/sites?start=1&end=2000&enzymes=EcoRI,BamHI
-    enzymes verilmezse en sık kullanılan enzimler taranır.
-    """
     summary = _summary_or_404(gene_id)
     start, end = _window(summary)
     names = [n.strip() for n in (request.args.get("enzymes") or "").split(",") if n.strip()]
@@ -168,7 +154,6 @@ def sites(gene_id: int):
 
 @api.get("/enzymes")
 def enzymes():
-    """/api/enzymes?q=Eco  — kesim noktası bilinen enzimlerin listesi"""
     q = (request.args.get("q") or "").strip().lower()
     items = [e for e in refind.enzyme_list() if not q or q in e["name"].lower()]
     return jsonify({"total": len(items), "common": COMMON_ENZYMES, "enzymes": items})

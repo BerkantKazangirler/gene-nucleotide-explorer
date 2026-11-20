@@ -2,7 +2,6 @@ const nf = new Intl.NumberFormat("tr-TR");
 
 export const formatNumber = (n: number | null | undefined) => (n == null ? "—" : nf.format(n));
 
-/** 14600 -> "14,6 kb", 950 -> "950 baz" */
 export function formatLength(n: number | null | undefined): string {
   if (n == null) return "—";
   if (n >= 1_000_000) return `${(n / 1_000_000).toLocaleString("tr-TR", { maximumFractionDigits: 2 })} Mb`;
@@ -10,7 +9,6 @@ export function formatLength(n: number | null | undefined): string {
   return `${nf.format(n)} baz`;
 }
 
-/** Cetvel için "yuvarlak" aralık: 1, 2, 5 × 10^k */
 export function niceStep(span: number, targetTicks = 8): number {
   const raw = span / targetTicks;
   const pow = 10 ** Math.floor(Math.log10(raw));

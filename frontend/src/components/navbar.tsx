@@ -12,7 +12,6 @@ export const Navbar = ({ onHome }: { onHome: () => void }) => {
   );
 };
 
-/** Dört bazın renkleriyle küçük bir merdiven: logo. */
 const Logo = () => (
   <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden>
     <rect x="1" y="2" width="20" height="3" rx="1.5" fill="var(--color-base-a)" />
