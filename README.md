@@ -43,7 +43,7 @@ npm install
 npm run dev                        # http://localhost:5173
 ```
 
-Geliştirme sırasında `/api` istekleri Vite tarafından Flask'a yönlendirilir.
+Geliştirme sırasında `/api` istekleri Vite tarafından Flask'a yönlendirilir. Backend adresi `frontend/.env` dosyasındaki `VITE_API_URL` değişkeninden okunur (örnek: `frontend/.env.example`). Dosya yoksa `http://127.0.0.1:5000` kullanılır.
 
 **Testler** (internet bağlantısı gerektirmez):
 
