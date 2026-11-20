@@ -11,7 +11,7 @@ Bu proje, **TÜBİTAK 2209-A Üniversite Öğrencileri Araştırma Projeleri Des
 ## 👥 Ekip
 
 - Proje Yürütücüsü **Berkant Kazangirler**
-- Proje Ortağı **Şerife Songül Duran**
+- Proje Ortağı **Emir Kaan Özler**
 - Danışman **Dr. Öğr. Üyesi Mesut Özdağ**
 
 ---
