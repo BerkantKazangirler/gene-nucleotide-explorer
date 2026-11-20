@@ -1,4 +1,4 @@
-# 🧬 ReFinder
+# 🧬 gene-nucleotide-explorer
 
 > 🚧 **Geliştirme aşamasında.**
 

@@ -135,7 +135,7 @@ class ReFind:
 
     def _get(self, endpoint: str, params: dict, timeout: int = 15) -> str:
         params = dict(params)
-        params["tool"] = "ReFinder"
+        params["tool"] = "gene-nucleotide-explorer"
         if self.email:
             params["email"] = self.email
         if self.api_key:

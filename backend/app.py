@@ -15,7 +15,7 @@ app.register_blueprint(api.api)
 @app.get("/")
 def index():
     return jsonify({
-        "name": "ReFinder API",
+        "name": "gene-nucleotide-explorer API",
         "endpoints": [
             "/api/health",
             "/api/search?q=MEFV&organism=Homo sapiens",
