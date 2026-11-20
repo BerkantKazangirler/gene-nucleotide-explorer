@@ -1,15 +1,19 @@
-import { lazy, Suspense, useMemo, useState, type ReactNode } from "react";
+import { lazy, Suspense, useMemo, useRef, useState, type ReactNode } from "react";
 import { ChromosomeBar } from "@/components/gene-map/ChromosomeBar";
 import { ExonInfo } from "@/components/gene-map/ExonInfo";
 import { GeneTrack } from "@/components/gene-map/GeneTrack";
+import type { BaseHover, BaseWindow } from "@/components/gene-map/GeneScene";
 import { sortTranscripts, type HoverTarget } from "@/components/gene-map/geometry";
+import { BASE_COLORS, hydrogenBonds, REGION_COLORS } from "@/components/gene-map/colors";
 import { useFetch } from "@/hooks/useFetch";
 import type { GeneStructure, GeneSummary } from "@/types";
+import { fetchData } from "@/utils/fetchData";
 import { formatLength, formatNumber } from "@/utils/format";
 import { Notice } from "./search";
 
-// three.js büyük bir kütüphane; sadece detay sayfası açılınca yüklenir
+// three.js büyük bir kütüphane; 3B görünümler sadece detay sayfası açılınca yüklenir
 const GeneScene = lazy(() => import("@/components/gene-map/GeneScene"));
+const GeneGraph = lazy(() => import("@/components/gene-map/GeneGraph"));
 
 interface Props {
   geneId: string;
@@ -39,8 +43,9 @@ export const DetailLayout = ({ geneId, onBack }: Props) => {
           Gen haritası
         </h2>
         <p className="mt-1 text-ink-soft max-w-2xl">
-          Her sıra bir transkript, yani genin okunma şekillerinden biri. Kalın parçalar ekzonlar, aradaki ince sarmal
-          intronlar. Mavi kısımlar proteine çevrilir, yeşil kısımlar çevrilmez.
+          Gen, DNA'nın çift sarmalı üzerinde bir bölge. Sarmalın parlak kısımları ekzonlar: mavi kısımlar proteine
+          çevrilir, yeşil kısımlar çevrilmez. Sönük kısımlar intronlar. Bir ekzon seçip baz çiftlerine yakınlaşabilir ya
+          da ilişki ağında transkriptlerin hangi ekzonları paylaştığını görebilirsin.
         </p>
 
         <div className="mt-5">
@@ -50,7 +55,7 @@ export const DetailLayout = ({ geneId, onBack }: Props) => {
             (structure.data.transcripts.length === 0 ? (
               <StageMessage>Bu gen için NCBI kaydında transkript (mRNA) bilgisi yok, harita çizilemiyor.</StageMessage>
             ) : (
-              <GeneMap structure={structure.data} />
+              <GeneMap structure={structure.data} geneId={geneId} />
             ))}
         </div>
       </section>
@@ -106,17 +111,64 @@ const GeneHeader = ({ gene }: { gene: GeneSummary }) => (
   </header>
 );
 
-const GeneMap = ({ structure }: { structure: GeneStructure }) => {
+type BasesState =
+  | { status: "idle" }
+  | { status: "loading"; exon: number }
+  | { status: "error"; exon: number; error: string }
+  | { status: "ready"; exon: number; data: BaseWindow };
+
+const BASE_WINDOW = 60; // yakın görünümde gösterilen baz çifti sayısı
+
+const GeneMap = ({ structure, geneId }: { structure: GeneStructure; geneId: string }) => {
   const transcripts = useMemo(() => sortTranscripts(structure.transcripts), [structure]);
   const [selectedId, setSelectedId] = useState(transcripts[0].id);
   const [hovered, setHovered] = useState<HoverTarget | null>(null);
   const [pinned, setPinned] = useState<HoverTarget | null>(null);
+  const [view, setView] = useState<"helix" | "graph">("helix");
+  const [bases, setBases] = useState<BasesState>({ status: "idle" });
+  const [baseHover, setBaseHover] = useState<BaseHover | null>(null);
+  const request = useRef(0);
   const selected = transcripts.find((t) => t.id === selectedId) ?? transcripts[0];
 
   const selectTranscript = (id: string) => {
     if (id === selectedId) return;
     setSelectedId(id);
     setPinned(null);
+    setBases({ status: "idle" });
+  };
+
+  /** Ekzonun çevresinden 60 bazlık bir pencere seçip gerçek diziyi NCBI'dan ister. */
+  const showBases = async (exonNumber: number) => {
+    const exon = selected.exons.find((e) => e.number === exonNumber);
+    if (!exon) return;
+    const L = structure.length;
+    let start: number;
+    if (exon.length <= BASE_WINDOW - 16) {
+      // kısa ekzon: tamamı ve iki yanındaki intron sınırı görünsün
+      start = Math.round((exon.start + exon.end) / 2) - BASE_WINDOW / 2;
+    } else {
+      // uzun ekzon: intron-ekzon sınırından başla
+      start = exon.start - 8;
+    }
+    start = Math.max(1, Math.min(start, L - BASE_WINDOW + 1));
+    const end = Math.min(L, start + BASE_WINDOW - 1);
+
+    const id = ++request.current;
+    setView("helix");
+    setPinned({ transcriptId: selected.id, exon: exonNumber });
+    setBases({ status: "loading", exon: exonNumber });
+    try {
+      const data = await fetchData<BaseWindow>(`/api/genes/${geneId}/sequence?start=${start}&end=${end}`);
+      if (id === request.current) setBases({ status: "ready", exon: exonNumber, data });
+    } catch (e) {
+      if (id === request.current) setBases({ status: "error", exon: exonNumber, error: (e as Error).message });
+    }
+  };
+
+  const leaveBases = () => {
+    request.current++;
+    setBases({ status: "idle" });
+    setBaseHover(null);
   };
 
   const shared = {
@@ -130,41 +182,131 @@ const GeneMap = ({ structure }: { structure: GeneStructure }) => {
     onSelectTranscript: selectTranscript,
   };
 
+  const inBases = view === "helix" && bases.status === "ready";
+  const target = hovered ?? pinned;
+  const focusExon = target && target.transcriptId === selected.id ? target.exon : null;
+
   return (
     <div className="rounded-2xl overflow-hidden border border-stage-line bg-sheet">
-      <div className="relative h-[420px] sm:h-[480px] bg-stage">
-        <Suspense fallback={<div className="absolute inset-0 grid place-items-center text-[#d9e5ea]">3B sahne yükleniyor…</div>}>
-          <GeneScene {...shared} />
+      <div className="relative h-[460px] sm:h-[540px] bg-stage text-[#d9e5ea]">
+        <Suspense fallback={<div className="absolute inset-0 grid place-items-center">3B sahne yükleniyor…</div>}>
+          {view === "helix" ? (
+            <GeneScene
+              length={structure.length}
+              transcript={selected}
+              hovered={hovered}
+              pinned={pinned}
+              onHover={setHovered}
+              onPin={setPinned}
+              bases={bases.status === "ready" ? bases.data : null}
+              onHoverBase={setBaseHover}
+            />
+          ) : (
+            <GeneGraph symbol={structure.symbol ?? "Gen"} {...shared} />
+          )}
         </Suspense>
 
+        {/* üst şerit: açıklama + görünüm seçimi */}
         <div className="absolute top-3 left-3 right-3 flex flex-wrap gap-3 justify-between items-start pointer-events-none">
-          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[#d9e5ea] bg-stage/80 rounded-lg px-3 py-2">
-            <Legend color="var(--color-base-c)">Kodlayan bölge (CDS)</Legend>
-            <Legend color="var(--color-base-a)">Kodlamayan ekzon (UTR)</Legend>
-            <Legend color="#8aa1ad" thin>
-              İntron
-            </Legend>
+          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm bg-stage/80 rounded-lg px-3 py-2 max-w-full">
+            {inBases ? (
+              <>
+                <Legend color={BASE_COLORS.A}>A</Legend>
+                <Legend color={BASE_COLORS.T}>T</Legend>
+                <Legend color={BASE_COLORS.G}>G</Legend>
+                <Legend color={BASE_COLORS.C}>C</Legend>
+                <li className="text-[#9fb4bd]">A, T ile; G, C ile eşleşir</li>
+              </>
+            ) : view === "graph" ? (
+              <>
+                <Legend color="#eef4f6" dot>Gen</Legend>
+                <Legend color="#9fb4bd" dot>Transkript</Legend>
+                <Legend color={REGION_COLORS.cds} dot>Kodlayan ekzon</Legend>
+                <Legend color={REGION_COLORS.utr} dot>Kodlamayan ekzon</Legend>
+                <Legend color="#f2b134" dot>Protein</Legend>
+              </>
+            ) : (
+              <>
+                <Legend color={REGION_COLORS.cds}>Kodlayan bölge (CDS)</Legend>
+                <Legend color={REGION_COLORS.utr}>Kodlamayan ekzon (UTR)</Legend>
+                <Legend color={REGION_COLORS.intronLine} thin>İntron</Legend>
+              </>
+            )}
           </ul>
-          {transcripts.length > 1 && (
-            <label className="pointer-events-auto text-sm text-[#d9e5ea] bg-stage/80 rounded-lg px-3 py-2 flex items-center gap-2">
-              Transkript
-              <select
-                value={selected.id}
-                onChange={(e) => selectTranscript(e.target.value)}
-                className="bg-stage border border-stage-line rounded-md px-2 py-1 text-[#d9e5ea] max-w-[14rem]"
-              >
-                {transcripts.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.id} ({t.exons.length} ekzon)
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
+          <div className="pointer-events-auto flex flex-wrap gap-2 justify-end">
+            <div role="group" aria-label="Görünüm" className="flex rounded-lg bg-stage/80 border border-stage-line p-0.5 text-sm">
+              {(
+                [
+                  ["helix", "Çift sarmal"],
+                  ["graph", "İlişki ağı"],
+                ] as const
+              ).map(([v, label]) => (
+                <button
+                  key={v}
+                  aria-pressed={view === v}
+                  onClick={() => setView(v)}
+                  className={`px-3 py-1.5 rounded-md ${view === v ? "bg-[#d9e5ea] text-stage font-bold" : "hover:text-white"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {transcripts.length > 1 && !inBases && (
+              <label className="text-sm bg-stage/80 rounded-lg px-3 py-1.5 flex items-center gap-2 border border-stage-line">
+                <span className="sr-only sm:not-sr-only">Transkript</span>
+                <select
+                  value={selected.id}
+                  onChange={(e) => selectTranscript(e.target.value)}
+                  className="bg-stage rounded-md px-1 py-0.5 max-w-[12rem]"
+                >
+                  {transcripts.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.id} ({t.exons.length} ekzon)
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
         </div>
-        <p className="absolute bottom-3 left-3 text-xs text-[#9fb4bd] pointer-events-none">
-          Sürükleyerek döndür, kaydırarak yakınlaş, bir ekzona tıklayarak seç.
-        </p>
+
+        {/* alt şerit: duruma göre yardım, yükleniyor, baz bilgisi ve eylemler */}
+        <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2 justify-between items-end pointer-events-none">
+          <p className="text-xs sm:text-sm text-[#9fb4bd] bg-stage/70 rounded-md px-2 py-1" aria-live="polite">
+            {view === "graph" &&
+              "Aynı ekzonu kullanan transkriptler aynı düğüme bağlanır. Sürükle, kaydır, bir düğüme tıkla."}
+            {view === "helix" && bases.status === "loading" && `Ekzon ${bases.exon} çevresindeki dizi NCBI'dan alınıyor…`}
+            {view === "helix" && bases.status === "error" && <span className="text-[#ff8a80]">{bases.error}</span>}
+            {view === "helix" && bases.status === "idle" && "Sürükleyerek döndür, kaydırarak yakınlaş, bir ekzona tıklayarak seç."}
+            {inBases &&
+              (baseHover ? (
+                <span className="text-[#d9e5ea]">
+                  {formatNumber(baseHover.pos)}. baz: <b style={{ color: BASE_COLORS[baseHover.base] }}>{baseHover.base}</b>
+                  {hydrogenBonds(baseHover.base) === 3 ? " ≡ " : " = "}
+                  <b style={{ color: BASE_COLORS[baseHover.pair] }}>{baseHover.pair}</b> ({hydrogenBonds(baseHover.base)} hidrojen
+                  bağı),{" "}
+                  {baseHover.exon != null
+                    ? `ekzon ${baseHover.exon} ${baseHover.region === "cds" ? "(proteine çevrilir)" : "(çevrilmez)"}`
+                    : "intron"}
+                </span>
+              ) : (
+                `${formatNumber(bases.data.start)}–${formatNumber(bases.data.end)} arası, ${bases.data.sequence.length} baz çifti. Bir basamağın üzerine gel.`
+              ))}
+          </p>
+          <div className="pointer-events-auto flex gap-2">
+            {inBases ? (
+              <StageButton onClick={leaveBases}>Gen görünümüne dön</StageButton>
+            ) : (
+              view === "helix" &&
+              focusExon != null &&
+              bases.status !== "loading" && (
+                <StageButton onClick={() => showBases(focusExon)} primary>
+                  Ekzon {focusExon}: baz çiftlerini göster
+                </StageButton>
+              )
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="px-3 sm:px-5 pt-4 pb-2 border-t border-line">
@@ -172,15 +314,31 @@ const GeneMap = ({ structure }: { structure: GeneStructure }) => {
       </div>
 
       <div className="px-4 sm:px-5 py-4 border-t border-line" aria-live="polite">
-        <ExonInfo transcript={selected} target={hovered ?? pinned} onPin={setPinned} />
+        <ExonInfo transcript={selected} target={target} onPin={setPinned} onShowBases={showBases} />
       </div>
     </div>
   );
 };
 
-const Legend = ({ color, thin, children }: { color: string; thin?: boolean; children: ReactNode }) => (
+const StageButton = ({ children, onClick, primary }: { children: ReactNode; onClick: () => void; primary?: boolean }) => (
+  <button
+    onClick={onClick}
+    className={`text-sm px-3 py-2 rounded-lg border font-medium ${
+      primary
+        ? "bg-[#d9e5ea] text-stage border-transparent hover:bg-white"
+        : "bg-stage/80 border-stage-line hover:border-[#d9e5ea]"
+    }`}
+  >
+    {children}
+  </button>
+);
+
+const Legend = ({ color, thin, dot, children }: { color: string; thin?: boolean; dot?: boolean; children: ReactNode }) => (
   <li className="flex items-center gap-2">
-    <span className="inline-block w-5 rounded-full" style={{ background: color, height: thin ? 3 : 10 }} />
+    <span
+      className="inline-block rounded-full"
+      style={{ background: color, width: dot ? 10 : 20, height: thin ? 3 : 10 }}
+    />
     {children}
   </li>
 );

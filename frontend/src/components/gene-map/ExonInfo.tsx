@@ -7,10 +7,11 @@ interface Props {
   transcript: Transcript;
   target: HoverTarget | null;
   onPin: (t: HoverTarget) => void;
+  onShowBases?: (exon: number) => void;
 }
 
 /** Üzerine gelinen ya da seçilen ekzonun ayrıntıları; seçim yoksa transkriptin genel özeti. */
-export const ExonInfo = ({ transcript: t, target, onPin }: Props) => {
+export const ExonInfo = ({ transcript: t, target, onPin, onShowBases }: Props) => {
   const exon = target && target.transcriptId === t.id ? t.exons.find((e) => e.number === target.exon) : undefined;
   const go = (n: number) => onPin({ transcriptId: t.id, exon: n });
 
@@ -48,7 +49,15 @@ export const ExonInfo = ({ transcript: t, target, onPin }: Props) => {
         <Fact label="Kodlayan kısım">{formatNumber(coding)} baz</Fact>
         <p className="col-span-full text-sm text-ink-soft">{kind}</p>
       </dl>
-      <div className="flex gap-2 justify-self-start sm:justify-self-end">
+      <div className="flex flex-wrap gap-2 justify-self-start sm:justify-self-end">
+        {onShowBases && (
+          <button
+            onClick={() => onShowBases(exon.number)}
+            className="px-3 py-2 rounded-lg bg-ink text-sheet hover:bg-base-c text-sm font-bold"
+          >
+            Baz çiftlerini göster
+          </button>
+        )}
         <button
           onClick={() => go(exon.number - 1)}
           disabled={exon.number <= 1}
