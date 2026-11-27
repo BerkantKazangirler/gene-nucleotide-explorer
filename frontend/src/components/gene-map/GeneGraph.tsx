@@ -17,6 +17,8 @@ export interface GeneGraphProps {
   onSelectTranscript: (id: string) => void;
 }
 
+const RENDERER_CONFIG = { preserveDrawingBuffer: true };
+
 const NODE_COLORS = {
   gene: "#eef4f6",
   transcript: "#9fb4bd",
@@ -75,6 +77,7 @@ export default function GeneGraph(props: GeneGraphProps) {
           height={size.height}
           graphData={data}
           backgroundColor="#10242e"
+          rendererConfig={RENDERER_CONFIG}
           showNavInfo={false}
           dagMode="td"
           dagLevelDistance={70}
