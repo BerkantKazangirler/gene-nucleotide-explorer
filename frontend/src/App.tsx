@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Footer } from "./components/footer";
 import { Navbar } from "./components/navbar";
+import { RawDataModal } from "./components/raw-data-modal";
 import { DetailLayout } from "./layouts/detail";
 import { SearchLayout } from "./layouts/search";
 
@@ -29,6 +30,7 @@ function App() {
   const geneId = params.get("gene");
   const query = params.get("q") ?? "";
   const organism = params.get("organism") ?? "";
+  const [dataOpen, setDataOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -39,6 +41,7 @@ function App() {
         showSearch={Boolean(query || geneId)}
         onHome={() => navigate({})}
         onSearch={(q, org) => navigate({ q, organism: org })}
+        onOpenData={() => setDataOpen(true)}
       />
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 pb-12">
         {geneId ? (
@@ -57,6 +60,7 @@ function App() {
         )}
       </main>
       <Footer />
+      <RawDataModal open={dataOpen} onClose={() => setDataOpen(false)} />
     </div>
   );
 }
