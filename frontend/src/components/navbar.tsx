@@ -12,9 +12,10 @@ interface Props {
   showSearch: boolean;
   onHome: () => void;
   onSearch: (q: string, organism: string) => void;
+  onOpenData: () => void;
 }
 
-export const Navbar = ({ query, organism, showSearch, onHome, onSearch }: Props) => {
+export const Navbar = ({ query, organism, showSearch, onHome, onSearch, onOpenData }: Props) => {
   const [text, setText] = useState(query);
   const [org, setOrg] = useState(organism);
 
@@ -62,6 +63,12 @@ export const Navbar = ({ query, organism, showSearch, onHome, onSearch }: Props)
             <button className="h-9 px-4 rounded-r bg-ink text-paper text-sm font-semibold hover:bg-base-c">Ara</button>
           </form>
         )}
+        <button
+          onClick={onOpenData}
+          className="ml-auto h-8 px-3 border border-line rounded bg-paper hover:border-ink text-sm font-semibold whitespace-nowrap"
+        >
+          Ham veri
+        </button>
       </div>
     </header>
   );

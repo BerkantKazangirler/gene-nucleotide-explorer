@@ -56,6 +56,7 @@ export default function GeneScene(props: GeneSceneProps) {
     <Canvas
       camera={{ position: [-20, 3, 8], fov: FOV, near: 0.1, far: 400 }}
       dpr={[1, 2]}
+      gl={{ preserveDrawingBuffer: true }}
       onPointerMissed={() => {
         props.onHover(null);
         props.onHoverBase(null);
