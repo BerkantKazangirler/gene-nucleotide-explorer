@@ -1,6 +1,7 @@
 import { lazy, Suspense, useMemo, useRef, useState, type ReactNode } from "react";
 import { ChromosomeBar } from "@/components/gene-map/ChromosomeBar";
 import { ExonInfo } from "@/components/gene-map/ExonInfo";
+import { downloadCanvasJpg } from "@/components/gene-map/exportCanvas";
 import { GeneTrack } from "@/components/gene-map/GeneTrack";
 import type { BaseHover, BaseWindow } from "@/components/gene-map/GeneScene";
 import { sortTranscripts, type HoverTarget } from "@/components/gene-map/geometry";
@@ -135,6 +136,7 @@ const GeneMap = ({ structure, geneId }: { structure: GeneStructure; geneId: stri
   const [bases, setBases] = useState<BasesState>({ status: "idle" });
   const [baseHover, setBaseHover] = useState<BaseHover | null>(null);
   const request = useRef(0);
+  const stage = useRef<HTMLDivElement>(null);
   const selected = transcripts.find((t) => t.id === selectedId) ?? transcripts[0];
 
   const selectTranscript = (id: string) => {
@@ -173,6 +175,13 @@ const GeneMap = ({ structure, geneId }: { structure: GeneStructure; geneId: stri
     request.current++;
     setBases({ status: "idle" });
     setBaseHover(null);
+  };
+
+  const exportImage = async () => {
+    const canvas = stage.current?.querySelector("canvas");
+    if (!canvas) return;
+    const view_name = view === "helix" ? "cift-sarmal" : "iliski-agi";
+    await downloadCanvasJpg(canvas, `${structure.symbol ?? "gen"}-${selected.id}-${view_name}.jpg`);
   };
 
   const shared = {
@@ -267,6 +276,7 @@ const GeneMap = ({ structure, geneId }: { structure: GeneStructure; geneId: stri
               </select>
             </label>
           )}
+          <ToolButton onClick={exportImage}>JPG indir</ToolButton>
           {inBases ? (
             <ToolButton onClick={leaveBases}>Gen görünümüne dön</ToolButton>
           ) : (
@@ -279,7 +289,7 @@ const GeneMap = ({ structure, geneId }: { structure: GeneStructure; geneId: stri
         </div>
       </div>
 
-      <div className="relative h-[320px] sm:h-[520px] bg-stage text-[#d9e5ea]">
+      <div ref={stage} className="relative h-[320px] sm:h-[520px] bg-stage text-[#d9e5ea]">
         <Suspense fallback={<div className="absolute inset-0 grid place-items-center text-sm">Yükleniyor…</div>}>
           {view === "helix" ? (
             <GeneScene
